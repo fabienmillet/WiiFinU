@@ -13,6 +13,7 @@ The Wii's sources build for the 3DS as they are, with a few `#ifdef __3DS__` whe
 | `Player3ds.cpp` | What MPlayer does on the Wii (`WiiPlayer.h`): an HTTP(S) reader thread fills a ring buffer (the cache), FFmpeg demuxes and decodes from it; the sound (about a second ahead) is the clock, the pictures go through Y2R into one of three textures shown on the top screen, subtitles drawn over them. |
 | `JpegTexture3ds.cpp` | Posters and photos into RGB565 textures, at most 512 pixels a side. |
 | `Platform3ds.cpp` | The start (New 3DS speed, the GPU), the top screen when no video plays, the HOME menu / sleep hook that pauses a video. |
+| `ui/` | The 3DS's own screens, 1:1 in its pixels: `Ui3ds` (spaces, touch, drawing, scrolling, the top screen's info), `Browse3ds` (home, libraries, series, page, search), `Connect3ds`, `Welcome3ds`, `Images3ds` (posters and backdrops fetched by a thread), `Job3ds`; and, included by the shared files, the 3DS drawing of the player (`PlayerView3ds.inc`), the settings (`SettingsView3ds.inc`), the music player (`MusicPlayerView3ds.inc`) and the START menu (`HomeMenu3ds.inc`): their logic stays the Wii's. |
 | `Misc3ds.cpp` | Wii-only pieces with nothing to do (reload from the DOL, the music visualiser's DSP readout). |
 
 Excluded from the 3DS build (`WII_ONLY` in `Makefile.3ds`): MPlayer's glue (`WiiPlayer.cpp`, `stream_wiifin.cpp`, `vo_wiifin.c`, `VideoSurface.cpp`, `OgcCompat.c`), `AudioSpectrum.cpp`, `JpegTexture.cpp`, `LwpJoinFix.cpp`, `Reload.cpp`.

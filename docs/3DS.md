@@ -1,6 +1,6 @@
 # WiiFin on the Nintendo 3DS
 
-WiiFin also runs on the **Nintendo 3DS, 2DS and New 3DS / New 2DS** (XL included), from the Homebrew Launcher. It is the same application as on the Wii, built from the same sources: profiles, home screen, libraries, search, music, subtitles, Quick Connect, the remote control from Jellyfin's dashboard.
+WiiFin also runs on the **Nintendo 3DS, 2DS and New 3DS / New 2DS** (XL included), from the Homebrew Launcher, under a name of its own (**3DSFin** for now: `make -f Makefile.3ds APP_NAME=...` changes it everywhere). It is built from the same sources as the Wii version (Jellyfin client, player logic, settings, translations), with screens of its own made for the two screens and the stylus: profiles, sign-in (the 3DS's keyboard, Quick Connect, servers found on the network), home rows, libraries, series, a film's page, search, the player, music, settings.
 
 ## Install
 
@@ -13,8 +13,8 @@ Settings, profiles and the log (`wiifin.log`, for bug reports) are kept in `sdmc
 
 ## The two screens
 
-- **Bottom screen (touch)**: the menus. Touch what you want: a tap is the Wii Remote's A where you tapped. The button hints at the bottom (B Back, Y Search, START Menu...) can be tapped too: the stylus alone does everything. Everything can also be done with the buttons.
-- **Top screen**: the video while one plays, with its subtitles; otherwise WiiFin's logo, the clock and the music playing.
+- **Bottom screen (touch)**: browsing and the controls, drawn at the screen's own size: tap, drag the lists and rows, tap the bar's back arrow, search, settings. Everything can also be done with the buttons.
+- **Top screen**: what is selected (its backdrop or poster, title, year, length, synopsis), the cover and title of the music playing, or the video and its subtitles while one plays.
 
 ## Buttons
 
@@ -22,7 +22,8 @@ Settings, profiles and the log (`wiifin.log`, for bug reports) are kept in `sdmc
 |---|---|
 | A / B | Select / Back |
 | D-pad, Circle Pad | Move |
-| Y / X | The Wii Remote's 1 / 2 (Favorite, Audio track, Search...) |
+| Y | Search (the 3DS's keyboard) |
+| X | Remove a profile (pressed twice), shuffle in the music player |
 | L / R | The Wii Remote's - / + (pages, tabs, previous / next) |
 | SELECT (or ZL / ZR on a New 3DS) | Zoom during a video (fit / fill), Watched, Browse... |
 | START | WiiFin's HOME menu: Exit, back to the Homebrew Launcher |
@@ -38,10 +39,10 @@ The video is decoded by the CPU (FFmpeg); the colour conversion is done by the 3
 
 ## Differences from the Wii version
 
-- No screen area, smooth motion or disc slot light settings (no TV, no disc slot).
-- No USB keyboard: the on-screen keyboard, by touch or with the buttons.
-- The HOME menu's only choice is Exit (the console's own HOME button does the rest).
-- The interface is the Wii's 640x480 one at half size: small text, sharp (drawn at the screen's own pixel size).
+- Its own screens (source/platform/3ds/ui): two screens, the stylus, text at the screen's own size.
+- No screen area, smooth motion, disc slot light, home layout or library view settings.
+- Text is typed with the 3DS's keyboard. START's menu only leaves (the console's HOME button is the system's).
+- It says "the console" where the Wii version says "the Wii"; the server's dashboard shows it as a Nintendo 3DS.
 
 ## Building
 
