@@ -16,6 +16,23 @@
 #include <stdio.h>
 
 /* ---- Layout (640x480 virtual screen) ---------------------------------- */
+#ifdef __3DS__
+/* the 3DS: the whole bottom screen is the controls (the picture is on the
+ * top one).  In the Wii frame's units (2 per pixel of the touch screen),
+ * as the pointer reads them; PlayerView3ds.inc draws them. */
+static const int TOP_H      = 80;
+static const int PANEL_Y    = 0;
+static const int BAR_X      = 32, BAR_W = 576;
+static const int BAR_Y      = 176, BAR_H = 12;
+static const int TIME_Y     = 196;
+static const int BTN_Y      = 232, BTN_H = 92;
+static const int BTN_W      = 104, BTN_GAP = 16;
+static const int BTN_COUNT  = 5;
+static const int BTN_X0     = 28;
+/* the bottom row: audio, subtitles, zoom, back */
+static const int ROW2_Y     = 352, ROW2_H = 76, ROW2_W = 140, ROW2_GAP = 8, ROW2_X0 = 24;
+static const int BTN_AUDIO = 10, BTN_SUBS = 11, BTN_BACK = 12;
+#else
 static const int TOP_H      = 52;
 static const int PANEL_Y    = 368;              /* bottom control panel   */
 static const int BAR_X      = 32, BAR_W = 576;
@@ -25,13 +42,23 @@ static const int BTN_Y      = 428, BTN_H = 38;
 static const int BTN_W      = 84,  BTN_GAP = 12;
 static const int BTN_COUNT  = 5;
 static const int BTN_X0     = (640 - (BTN_COUNT * BTN_W + (BTN_COUNT - 1) * BTN_GAP)) / 2;
+#endif
 /* Zoom button (Fit / Fill), alone at the right end of the transport row */
 static const int BTN_ZOOM   = BTN_COUNT, ZOOM_W = 48;
+#ifndef __3DS__
 static float zoomX() { return Ui::screenRight() - 24 - ZOOM_W; }
+#endif
+#ifdef __3DS__
+static const int INTRO_X    = 360, INTRO_Y = 96, INTRO_W = 256, INTRO_H = 60;
+static const int LIST_X     = 24,  LIST_W  = 592;
+static const int LIST_Y     = 36,  ROW_H   = 60;
+static const int LIST_ROWS  = 6;
+#else
 static const int INTRO_X    = 466, INTRO_Y = 312, INTRO_W = 150, INTRO_H = 40;
 static const int LIST_X     = 150, LIST_W  = 340;
 static const int LIST_Y     = 112, ROW_H   = 34;
 static const int LIST_ROWS  = 7;
+#endif
 
 static u64 nowMs() { return ticks_to_millisecs(gettime()); }
 
@@ -129,6 +156,9 @@ const char* PlayerView::segmentLabel(int i) const
 
 bool PlayerView::controlsVisible() const
 {
+#ifdef __3DS__
+    return true;   /* the bottom screen is the controls: not over the picture */
+#endif
     /* A pause held for rebuffering is not the user's: keep the picture clean */
     return panel != Panel::None || (g_mplayer_paused && rebufPercent < 0) ||
            nowMs() < controlsUntil;
@@ -335,7 +365,13 @@ void PlayerView::hitTest(const ir_t& ir)
     for (int i = 0; i < BTN_COUNT; ++i)
         if (inRect(ir, BTN_X0 + i * (BTN_W + BTN_GAP), BTN_Y, BTN_W, BTN_H))
             hoverButton = i;
+#ifdef __3DS__
+    static const int ROW2[4] = { BTN_AUDIO, BTN_SUBS, BTN_ZOOM, BTN_BACK };
+    for (int i = 0; i < 4; ++i)
+        if (inRect(ir, ROW2_X0 + i * (ROW2_W + ROW2_GAP), ROW2_Y, ROW2_W, ROW2_H)) hoverButton = ROW2[i];
+#else
     if (inRect(ir, zoomX(), BTN_Y, ZOOM_W, BTN_H)) hoverButton = BTN_ZOOM;
+#endif
 }
 
 void PlayerView::toggleZoom()
@@ -459,6 +495,17 @@ PlayerView::Action PlayerView::update(u32 down, const ir_t& ir)
                 if (hasNext) act = Action::Next; else toast(tr("No next episode"));
                 break;
             case BTN_ZOOM: toggleZoom(); break;
+#ifdef __3DS__
+            case BTN_AUDIO:
+                if (ctx.audioStreams.size() > 1) openPanel(Panel::Audio);
+                else toast(tr("No other audio track"));
+                break;
+            case BTN_SUBS:
+                if (!ctx.subStreams.empty()) openPanel(Panel::Sub);
+                else toast(tr("No subtitles available"));
+                break;
+            case BTN_BACK: return Action::Back;
+#endif
             }
         } else {
             wii_player_pause_toggle();
@@ -526,6 +573,7 @@ void PlayerView::drawSpinner(float cx, float cy)
 }
 
 /* Centred pill with a message (busy state, toasts). */
+#ifndef __3DS__   /* (the 3DS draws its own) */
 static void messagePill(float cy, const std::string& msg, int size)
 {
     const Ui::Palette& p = Ui::pal();
@@ -536,7 +584,11 @@ static void messagePill(float cy, const std::string& msg, int size)
     Ui::roundBorder(320 - w / 2, cy - h / 2, w, h, h / 2, 1.5f, p.cardBorder);
     Ui::textCentered(320, cy - size / 2 - 1, msg.c_str(), size, p.text);
 }
+#endif
 
+#ifdef __3DS__
+#include "../platform/3ds/ui/PlayerView3ds.inc"
+#else
 void PlayerView::render(const ir_t& ir)
 {
     const Ui::Palette& p = Ui::pal();
@@ -760,3 +812,4 @@ void PlayerView::render(const ir_t& ir)
     if (ir.valid && cursorTex && (k > 0.5f || panel != Panel::None || introVisible()))
         GRRLIB_DrawImg((int)ir.x - 20, (int)ir.y - 4, cursorTex, ir.angle, 1.0f, 1.0f, 0xFFFFFFFF);
 }
+#endif
