@@ -454,6 +454,13 @@ void freePending()
     texUnlock();
 }
 
+void* pixels(Tex3ds* t, int& pw, int& ph)
+{
+    pw = t->tex.width;
+    ph = t->tex.height;
+    return t->tex.data;
+}
+
 int width(const Tex3ds* t)  { return t ? t->w : 0; }
 int height(const Tex3ds* t) { return t ? t->h : 0; }
 

@@ -31,6 +31,9 @@ Tex3ds* make(Fmt fmt, int w, int h, const void* pixels, int stride, bool vram = 
  * (the video's frames) */
 void    update(Tex3ds* t, const void* pixels, int stride);
 void    destroy(Tex3ds* t);
+/* Its texels (linear memory, the GPU's 8x8 tiles) and the texture's
+ * power-of-2 size: for hardware writing into it (Y2R) */
+void*   pixels(Tex3ds* t, int& pw, int& ph);
 int     width(const Tex3ds* t);
 int     height(const Tex3ds* t);
 /* A GRRLIB texture around one (GRRLIB_FreeTexture frees both) */

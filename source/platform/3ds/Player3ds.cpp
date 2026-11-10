@@ -771,16 +771,63 @@ void yuvToRgb565(const AVFrame* f, u16* out, int w, int h)
 unsigned s_shown = 0;   /* pictures shown (wiifin_video_frames) */
 unsigned s_skipped = 0; /* decoded too late, not shown */
 
+/* The 3DS's YUV-to-RGB hardware (Y2R) writes the picture straight into
+ * the texture, in the GPU's 8x8 tiles: no work for the CPU, which the
+ * old 3DS needs for decoding.  Widths of 8n only (Jellyfin's 400, 320...),
+ * whole rows of tiles (a picture 8n+k lines tall loses its last k). */
+int    s_y2r = 0;          /* 0 not tried, 1 up, -1 none */
+Handle s_y2rEnd = 0;
+
+bool y2rConvert(const AVFrame* f, Tex3ds* t, int w, int h)
+{
+    if (s_y2r == 0) {
+        s_y2r = R_SUCCEEDED(y2rInit()) && R_SUCCEEDED(Y2RU_GetTransferEndEvent(&s_y2rEnd)) ? 1 : -1;
+        SYS_Report("[Player3ds] colour conversion: %s\n", s_y2r > 0 ? "Y2R hardware" : "software");
+    }
+    const int lines = h & ~7;
+    if (s_y2r < 0 || (w & 7) || lines <= 0 || f->format != AV_PIX_FMT_YUV420P) return false;
+    Y2RU_ConversionParams p;
+    memset(&p, 0, sizeof(p));
+    p.input_format = INPUT_YUV420_INDIV_8;
+    p.output_format = OUTPUT_RGB_16_565;
+    p.rotation = ROTATION_NONE;
+    p.block_alignment = BLOCK_8_BY_8;
+    p.input_line_width = (s16)w;
+    p.input_lines = (s16)lines;
+    p.standard_coefficient = COEFFICIENT_ITU_R_BT_601_SCALING;
+    p.alpha = 0xFF;
+    if (R_FAILED(Y2RU_SetConversionParams(&p))) return false;
+    for (int i = 0; i < 3; ++i)
+        svcFlushProcessDataCache(CUR_PROCESS_HANDLE, (u32)f->data[i], f->linesize[i] * (i ? lines / 2 : lines));
+    Y2RU_SetSendingY(f->data[0], w * lines, w, f->linesize[0] - w);
+    Y2RU_SetSendingU(f->data[1], w / 2 * lines / 2, w / 2, f->linesize[1] - w / 2);
+    Y2RU_SetSendingV(f->data[2], w / 2 * lines / 2, w / 2, f->linesize[2] - w / 2);
+    int pw, ph;
+    void* dst = Gfx3ds::pixels(t, pw, ph);
+    /* a row of tiles at a time, the texture's wider rows skipped */
+    Y2RU_SetReceiving(dst, w * lines * 2, w * 8 * 2, (pw - w) * 8 * 2);
+    if (R_FAILED(Y2RU_StartConversion())) return false;
+    if (svcWaitSynchronization(s_y2rEnd, 200 * 1000 * 1000LL) != 0) {
+        Y2RU_StopConversion();
+        SYS_Report("[Player3ds] Y2R timed out: software from now on\n");
+        s_y2r = -1;
+        return false;
+    }
+    return true;
+}
+
 void videoShow(const AVFrame* f)
 {
     ++s_shown;
     if (!s_rgb) return;
-    yuvToRgb565(f, s_rgb, s_texW, s_texH);
     LightLock_Lock(&s_texLock);
     int target = 0;
     while (target == s_front || target == s_drawn) ++target;
     LightLock_Unlock(&s_texLock);
-    Gfx3ds::update(s_tex[target], s_rgb, s_texW * 2);
+    if (!y2rConvert(f, s_tex[target], s_texW, s_texH)) {
+        yuvToRgb565(f, s_rgb, s_texW, s_texH);
+        Gfx3ds::update(s_tex[target], s_rgb, s_texW * 2);
+    }
     LightLock_Lock(&s_texLock);
     s_front = target;
     LightLock_Unlock(&s_texLock);
