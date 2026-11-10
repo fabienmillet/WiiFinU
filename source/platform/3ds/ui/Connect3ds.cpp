@@ -32,7 +32,8 @@ std::string Connect3ds::fullUrl() const
     std::string u = url;
     while (!u.empty() && (u.back() == '/' || u.back() == ' ')) u.pop_back();
     while (!u.empty() && u[0] == ' ') u.erase(0, 1);
-    if (u.find("://") == std::string::npos) u = "http://" + u;
+    /* without a scheme, JellyfinClient picks it as on the Wii: https with
+     * no port (or 443, 8920), else http */
     return u;
 }
 
