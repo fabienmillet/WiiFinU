@@ -104,6 +104,7 @@ struct TopInfo {
     GRRLIB_texImg* backdrop = nullptr;   /* wide picture, else ... */
     GRRLIB_texImg* poster = nullptr;     /* ... the poster at the side */
     float progress = -1;                 /* watched part, -1 none */
+    bool  square = false;                /* the poster is a cover (music) */
 };
 /* drawn by Platform3ds's top drawer while set (nullptr: the logo) */
 void setTopInfo(const TopInfo* info);

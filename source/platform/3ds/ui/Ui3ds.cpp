@@ -364,14 +364,22 @@ void drawTopInfo()
         image(ti.backdrop, 0, 0, TW, TH);
         gradient(0, 70, TW, 90, 0x00000000, 0x000000C0);
         rect(0, 160, TW, 80, 0x000000D8);
+    } else if (ti.poster && ti.square) {
+        Ui::shadow(16, 30, 180, 180, 8, 8, p.shadow);
+        image(ti.poster, 16, 30, 180, 180, 8);
+        textX = 210; textW = TW - textX - 12;
     } else if (ti.poster) {
         Ui::shadow(14, 20, 120, 180, 6, 6, p.shadow);
         image(ti.poster, 14, 20, 120, 180, 6);
         textX = 148; textW = TW - textX - 14;
+    } else if (ti.square) {   /* a cover still loading: its place kept */
+        Ui::roundRect(16, 30, 180, 180, 8, p.cardTop, p.cardBottom);
+        icon(Icon::Audio, 106, 120, 48, p.textDim);
+        textX = 210; textW = TW - textX - 12;
     }
     const u32 tc = ti.backdrop ? 0xFFFFFFFF : p.text;
     const u32 dc = ti.backdrop ? 0xD0D8E0FF : p.textDim;
-    float y = ti.backdrop ? 122 : 24;
+    float y = ti.backdrop ? 122 : ti.square ? 50 : 24;
     if (ti.backdrop && ti.overview.empty()) y = 168;
     text(textX, y, ti.title, 20, tc, textW);
     y += 26;

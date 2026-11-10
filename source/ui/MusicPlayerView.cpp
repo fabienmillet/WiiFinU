@@ -28,6 +28,9 @@
  */
 
 #include "MusicPlayerView.h"
+#ifdef __3DS__
+#pragma GCC diagnostic ignored "-Wunused-function"   /* the Wii's visualizers */
+#endif
 #include "../jellyfin/RemoteControl.h"
 #include "../core/ExitZone.h"
 #include "../core/MusicBGM.h"
@@ -61,7 +64,11 @@ extern unsigned char data_ring_png[];
 namespace {
 
 const int  BARS       = 32;       /* spectrum bands                         */
+#ifdef __3DS__
+const u64  IDLE_MS    = ~0ULL;    /* the 3DS: the controls stay (their own screen) */
+#else
 const u64  IDLE_MS    = 20000;    /* controls fade away after this          */
+#endif
 const int  PANEL_ROWS = 8;
 const int  AUTOPLAY   = 40;       /* tracks fetched when the queue runs out */
 const int  BUBBLES    = 40;
@@ -165,6 +172,7 @@ struct Session {
     std::string toastMsg;
     u64   toastUntil = 0;
     u64   lastFrame  = 0;
+    bool  hoverBack  = false;          /* the 3DS: its back arrow, top left */
 };
 Session* S = nullptr;
 
@@ -483,6 +491,21 @@ void glyphPlayPause(float cx, float cy, bool playing, u32 c)
 
 /* ---- Layout ---------------------------------------------------------------- */
 
+#ifdef __3DS__
+/* the 3DS: the bottom (touch) screen is the controls, in the Wii frame's
+ * units (2 a pixel) as the touch reads them; the cover, the title and the
+ * artist are on the top screen (MusicPlayerView3ds.inc) */
+const float ART_X = 48, ART_Y = 66, ART = 216;
+const float COL_X = 32, COL_W = 576;
+const float VIZ_BASE = -150, VIZ_H = 10;
+const float VIZ_TOP = -200, VIZ_BOT = -190;   /* no visualizer */
+const float BAR_X = 48, BAR_W = 544, BAR_Y = 236;
+const float CTL_Y = 334;
+const float CTL_X[C_COUNT] = { 48, 140, 224, 320, 416, 500, 592 };
+const float CTL_R[C_COUNT] = { 26, 26, 32, 42, 32, 26, 26 };
+const float PANEL_W = 600, PANEL_Y = 8, PANEL_H = 464, ROW_H = 46, ROWS_Y = 80;
+float panelX() { return 20; }
+#else
 const float ART_X = 48, ART_Y = 66, ART = 216;
 const float COL_X = 290, COL_W = 302;
 const float VIZ_BASE = 262, VIZ_H = 104;
@@ -495,6 +518,7 @@ const float CTL_R[C_COUNT] = { 20, 20, 24, 30, 24, 20, 20 };
 const float PANEL_W = 306, PANEL_Y = 18, PANEL_H = 420, ROW_H = 38, ROWS_Y = 86;
 /* the Up Next panel hugs the right edge of the screen, 4:3 or 16:9 */
 float panelX() { return Ui::screenRight() - PANEL_W - 16; }
+#endif
 /* its scroll arrows, for the pointer, under the rows */
 const float ARROW_Y = ROWS_Y + PANEL_ROWS * ROW_H + 14, ARROW_DX = 30;
 
@@ -763,9 +787,11 @@ void drawSeekBar(float pos, float dur, bool focused)
     Ui::shadow(kx - kr, BAR_Y - kr + 1, 2 * kr, 2 * kr, kr, 4.0f, p.shadow);
     Ui::circle(kx, BAR_Y, kr, 0xFFFFFFFF);
     Ui::circle(kx, BAR_Y, kr - 3, p.accent);
+#ifndef __3DS__   /* the 3DS writes them bigger (drawScreen3ds) */
     Ui::text(BAR_X, BAR_Y + 12, fmtTime(pos).c_str(), 14, p.text);
     std::string rest = dur > 0 ? "-" + fmtTime(dur - pos) : "--:--";
     Ui::textRight(BAR_X + BAR_W, BAR_Y + 12, rest.c_str(), 14, p.textDim);
+#endif
     if (s.hoverBar && dur > 0) {
         float hx = BAR_X + BAR_W * s.hoverFrac;
         std::string t = fmtTime(s.hoverFrac * dur);
@@ -834,8 +860,15 @@ void drawPanel()
 
 /* The whole screen.  live: drawn by the background thread while a track
  * plays (pointer, hover); else a still frame between tracks. */
+#ifdef __3DS__
+void drawScreen3ds(bool live, bool loading);
+#endif
 void drawScreen(bool live, bool loading)
 {
+#ifdef __3DS__
+    drawScreen3ds(live, loading);
+    return;
+#endif
     Session& s = *S;
     const Ui::Palette& p = Ui::pal();
     float pos = live ? position() : s.seekBase, dur = duration();
@@ -942,6 +975,10 @@ void drawScreen(bool live, bool loading)
         Ui::textCentered(320, 46, msg, 15, p.textOnAccent);
     }
 }
+
+#ifdef __3DS__
+#include "../platform/3ds/ui/MusicPlayerView3ds.inc"
+#endif
 
 void toast(const char* msg)
 {
@@ -1134,6 +1171,7 @@ void buttons(u32 down)
     }
     if (down & WPAD_BUTTON_A) {
         if (s.pointer) {
+            if (s.hoverBack)      { s.leavePage = true; return; }
             if (s.hoverBar)       seekTo(s.hoverFrac * duration());
             else if (s.hover >= 0) activate(s.hover);
             else if (s.hoverViz)  nextViz(1);
@@ -1224,7 +1262,7 @@ void frame()
     s.idleK = Ui::approach(s.idleK, idle ? 1.0f : 0.0f, idle ? 0.02f : 0.18f);
     s.panelK = Ui::approach(s.panelK, s.panel ? 1.0f : 0.0f, 0.22f);
 
-    s.hover = -1; s.hoverBar = false; s.hoverRow = -1; s.hoverViz = false;
+    s.hover = -1; s.hoverBar = false; s.hoverRow = -1; s.hoverViz = false; s.hoverBack = false;
     int arrow = 0;
     if (ir.valid && s.idleK < 0.3f) {
         if (s.panel) {
@@ -1253,6 +1291,9 @@ void frame()
                 s.hoverFrac = fminf(fmaxf((ir.x - BAR_X) / BAR_W, 0.0f), 1.0f);
             }
             s.hoverViz = ir.x >= COL_X - 8 && ir.x <= COL_X + COL_W + 8 && ir.y >= VIZ_TOP && ir.y <= VIZ_BOT;
+#ifdef __3DS__
+            s.hoverBack = ir.x < 80 && ir.y < 64;
+#endif
         }
     }
 
