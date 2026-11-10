@@ -17,6 +17,8 @@
 #include "../ui/LibraryView.h"
 #ifdef __3DS__
 #include "../platform/3ds/ui/Browse3ds.h"
+#include "../platform/3ds/ui/Connect3ds.h"
+#include "../platform/3ds/ui/Welcome3ds.h"
 #endif
 #include "../jellyfin/JellyfinClient.h"
 #include "../jellyfin/RemoteControl.h"
@@ -656,7 +658,11 @@ void App::loop() {
 
     /* ---- Helper: open ConnectView, on success add/update profile + library ---- */
     auto runConnect = [&](const SavedProfile* again = nullptr) {
+#ifdef __3DS__
+        Connect3ds cv(jellyfinClient);   /* the 3DS's own screen */
+#else
         ConnectView cv(btnTex, cursorPointerTex, font, jellyfinClient);
+#endif
         if (again) cv.setFields(again->serverUrl, again->username);   /* its password, each time */
         ConnectResult res = ConnectResult::None;
         while (res == ConnectResult::None && running) {
@@ -693,8 +699,10 @@ void App::loop() {
             if (found < 0) {
                 profiles.push_back(p);
                 found = (int)profiles.size() - 1;
+#ifndef __3DS__   /* the 3DS: its own screens, no home or library style to pick */
                 runOnboarding(profiles[found]);   /* sign-in, home screen, library view */
                 if (g_app_powerOff || g_app_reset) { running = false; return; }
+#endif
             }
             saveSettings();
             runLibraryWithProfile(profiles[found]);
@@ -759,6 +767,42 @@ void App::loop() {
 
     SYS_Report("[WiiFin] ready\n");   /* tools/test/smoke.sh waits for this */
     offerScreenCalibration(ir);
+
+#ifdef __3DS__
+    /* the 3DS: who watches, add an account, settings, leave (its own
+     * screen, in place of the main menu and the profile picker) */
+    while (running) {
+        Welcome3ds w(profiles);
+        Welcome3ds::Result r = Welcome3ds::Result::None;
+        while (r == Welcome3ds::Result::None && running) {
+            Input::update();
+            Input::readIR(ir);
+            if (g_app_powerOff || g_app_reset) { running = false; break; }
+            if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
+            r = w.update(ir);
+            GRRLIB_Render();
+        }
+        if (!running) break;
+        if (r == Welcome3ds::Result::Exit) { running = false; s_exitToLoader = true; break; }
+        if (r == Welcome3ds::Result::Settings) { runSettings(nullptr); continue; }
+        if (r == Welcome3ds::Result::Add) { runConnect(); toMainMenu = false; continue; }
+        if (r == Welcome3ds::Result::Remove) {
+            if (w.selected >= 0 && w.selected < (int)profiles.size()) {
+                profiles.erase(profiles.begin() + w.selected);
+                saveSettings();
+            }
+            continue;
+        }
+        SavedProfile& sp = profiles[w.selected];
+        if (sp.signIn == SavedProfile::Passcode && !askPasscode(sp)) continue;
+        if (sp.signIn == SavedProfile::Password) runConnect(&sp);
+        else {
+            runLibraryWithProfile(sp);
+            if (tokenRefused) { tokenRefused = false; runConnect(&sp); }
+        }
+        toMainMenu = false;
+    }
+#endif
 
     while (running) {
         Input::update();   // calls WPAD_ScanPads() internally

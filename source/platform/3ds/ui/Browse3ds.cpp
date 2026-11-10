@@ -16,26 +16,6 @@
 
 using namespace Ui3ds;
 
-/* ---- background jobs: a request to the server on a thread, its result
- * applied by the main thread once done ---------------------------------- */
-struct Browse3ds::Job {
-    lwp_t th = LWP_THREAD_NULL;
-    volatile bool done = false;
-    std::function<void()> work, apply;
-    static void* run(void* p) { Job* j = (Job*)p; j->work(); j->done = true; return nullptr; }
-    void start() { LWP_CreateThread(&th, run, this, nullptr, 128 * 1024, 40); }
-    bool running() const { return th != LWP_THREAD_NULL; }
-    bool poll()
-    {
-        if (th == LWP_THREAD_NULL || !done) return false;
-        LWP_JoinThread(th, nullptr);
-        th = LWP_THREAD_NULL;
-        if (apply) apply();
-        return true;
-    }
-    ~Job() { if (th != LWP_THREAD_NULL) LWP_JoinThread(th, nullptr); }
-};
-
 namespace {
 
 /* jobs of pages left while they ran: finished in the background */
@@ -43,11 +23,7 @@ std::vector<std::shared_ptr<Browse3ds::Job>>* s_orphans = nullptr;
 
 std::shared_ptr<Browse3ds::Job> runJob(std::function<void()> work, std::function<void()> apply)
 {
-    auto j = std::make_shared<Browse3ds::Job>();
-    j->work = std::move(work);
-    j->apply = std::move(apply);
-    j->start();
-    return j;
+    return runJob3ds(std::move(work), std::move(apply));
 }
 
 const int POSTER_W = 52, POSTER_H = 78;      /* home rows */

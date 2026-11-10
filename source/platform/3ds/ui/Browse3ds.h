@@ -8,6 +8,7 @@
  * ----------------------------------------------------------------------- */
 #include "../../../core/PlayRequest.h"
 #include "Ui3ds.h"
+#include "Job3ds.h"
 #include <map>
 #include <memory>
 #include <functional>
@@ -15,7 +16,7 @@
 class Browse3ds : public PlayRequest {
 public:
     enum class Exit { None, Profiles, Settings };
-    struct Job;   /* a request to the server on a thread (Browse3ds.cpp) */
+    using Job = Job3ds;
 
     Browse3ds(JellyfinClient& client, const JellyfinAuth& auth, const std::string& serverUrl,
               const std::string& userName);

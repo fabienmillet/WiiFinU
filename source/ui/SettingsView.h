@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __3DS__
+#include "../platform/3ds/ui/Ui3ds.h"
+#endif
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
 #include <vector>
@@ -49,6 +52,13 @@ private:
      * passcode asked then) */
     int    signInWant = -1;
     bool   leaveSignIn();
+    void   describeRows();
+#ifdef __3DS__
+    struct Row3ds { int id; std::string label, desc, value; u32 color; };
+    std::vector<Row3ds> rows3ds;   /* describeRows' rows, drawn by the 3DS */
+    Ui3ds::Touch touch3ds;
+    Ui3ds::Scroller scroll3ds;
+#endif
     /* a new passcode, typed twice */
     PinPad pin;
     int    pinStep = 0;           /* 0 none, 1 first time, 2 again */

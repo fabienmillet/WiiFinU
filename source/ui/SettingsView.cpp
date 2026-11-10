@@ -37,11 +37,13 @@ static const int SB_W = 320, SB_H = 52, SB_Y0 = 110, SB_STEP = 72;
 static const int ARROW_CY  = ROW_Y0 + (PER_PAGE * ROW_STEP - 10) / 2;   /* middle of the rows */
 static const int ARROW_HIT = 24;
 
+#ifndef __3DS__
 static bool overArrow(const ir_t& ir, float cx)
 {
     return ir.valid && ir.x >= cx - ARROW_HIT && ir.x < cx + ARROW_HIT &&
            ir.y >= ARROW_CY - ARROW_HIT && ir.y < ARROW_CY + ARROW_HIT;
 }
+#endif
 
 SettingsView::SettingsView(GRRLIB_texImg* btn, GRRLIB_ttfFont* f, JellyfinClient& c, bool& music,
                            SavedProfile* prof)
@@ -126,6 +128,10 @@ void SettingsView::renderMenu(ir_t& ir) {
 
 void SettingsView::drawRow(int id, const char* label, const char* desc,
                            const char* valStr, u32 pillCol) {
+#ifdef __3DS__
+    rows3ds.push_back({ id, tr(label), tr(desc), tr(valStr), pillCol });
+    return;
+#endif
     const Ui::Palette& p = Ui::pal();
     int i = -1;   /* its place in the open section */
     for (int k = 0; k < (int)rows.size(); ++k) if (rows[k] == id) i = k;
@@ -259,6 +265,7 @@ void SettingsView::renderCalibration()
 }
 
 // ---------------------------------------------------------------
+#ifndef __3DS__
 bool SettingsView::update(ir_t& ir) {
     bool aPressed = Input::isAJustPressed();
 
@@ -341,23 +348,12 @@ bool SettingsView::update(ir_t& ir) {
     else if (selectedIndex != selBefore)              SoundFX::play(SoundFX::FX::Move);
     return false;
 }
+#endif
 
-void SettingsView::render(ir_t& ir) {
-    if (calibrating) { renderCalibration(); return; }
-    if (pinStep) { Ui::background(); pin.render(ir); return; }
-    if (section < 0) { renderMenu(ir); return; }
+/* every row's label, description and value (drawRow: drawn, or on the
+ * 3DS gathered for its own drawing) */
+void SettingsView::describeRows() {
     const Ui::Palette& p = Ui::pal();
-    const int NUM_SETTINGS = (int)rows.size(), PAGES = pages();
-    for (int i = 0; i < NUM_SETTINGS; ++i)
-        focusAnim[i] = Ui::approach(focusAnim[i], i == selectedIndex ? 1.0f : 0.0f);
-
-    const int page = selectedIndex / PER_PAGE;
-    pageAnim = Ui::approach(pageAnim, (float)page, 0.25f);
-
-    Ui::background();
-    Ui::header(tr("Settings"), tr(SECTIONS[section]));
-
-
     drawRow(0, N_("SSL Verification"),
             N_("Validate the server HTTPS certificate (disable for self-signed certs)"),
             client.sslVerify ? N_("ON") : N_("OFF"), client.sslVerify ? p.ok : 0x8A9099FF);
@@ -459,6 +455,26 @@ void SettingsView::render(ir_t& ir) {
         const int m = signInWant >= 0 && signInWant < 3 ? signInWant : 0;
         drawRow(R_SIGNIN, N_("Sign-In"), desc[m], how[m], m == 0 ? 0x8A9099FF : p.accent);
     }
+}
+
+#ifndef __3DS__
+void SettingsView::render(ir_t& ir) {
+    if (calibrating) { renderCalibration(); return; }
+    if (pinStep) { Ui::background(); pin.render(ir); return; }
+    if (section < 0) { renderMenu(ir); return; }
+    const Ui::Palette& p = Ui::pal();
+    const int NUM_SETTINGS = (int)rows.size(), PAGES = pages();
+    for (int i = 0; i < NUM_SETTINGS; ++i)
+        focusAnim[i] = Ui::approach(focusAnim[i], i == selectedIndex ? 1.0f : 0.0f);
+
+    const int page = selectedIndex / PER_PAGE;
+    pageAnim = Ui::approach(pageAnim, (float)page, 0.25f);
+
+    Ui::background();
+    Ui::header(tr("Settings"), tr(SECTIONS[section]));
+
+
+    describeRows();
 
     /* page arrows on the screen edges + page dots */
     if (PAGES > 1) {
@@ -475,3 +491,8 @@ void SettingsView::render(ir_t& ir) {
     static const Ui::Hint right[] = { { "B", N_("Back") } };
     Ui::bottomBar(left, PAGES > 1 ? 3 : 2, right, 1);
 }
+#endif
+
+#ifdef __3DS__
+#include "../platform/3ds/ui/SettingsView3ds.inc"
+#endif
