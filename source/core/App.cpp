@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <string>
 #include "Log.h"
+#include <network.h>
 #include "../version.h"
 #include <ogc/ios.h>
 #include <ogc/lwp_watchdog.h>
@@ -145,6 +146,7 @@ void App::init(const char* argv0) {
 
     SYS_Report("[WiiFin] init start\n");
 
+#ifndef __3DS__   /* the 3DS: Platform3ds::init (main) set up the GPU */
     {
         VIDEO_Init();
         SYS_Report("[WiiFin] VIDEO_Init done\n");
@@ -173,6 +175,7 @@ void App::init(const char* argv0) {
         GX_Flush();
         SYS_Report("[WiiFin] GX pre-init done\n");
     }
+#endif
 
     SYS_Report("[WiiFin] GRRLIB_Init start\n");
     GRRLIB_Init();
@@ -228,6 +231,13 @@ void App::init(const char* argv0) {
         if (slash != std::string::npos)
             argvPath = p.substr(0, slash + 1) + "wiifin.cfg";
     }
+#ifdef __3DS__
+    /* the 3DS: its folder in the SD card's 3ds/ (the .3dsx sits in 3ds/) */
+    argvPath.clear();
+    const char* probes[] = {
+        "sdmc:/3ds/WiiFin/wiifin.cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    };
+#else
     const char* probes[] = {
         argvPath.empty() ? nullptr : argvPath.c_str(),
         "/apps/WiiFin/wiifin.cfg",        // no prefix = default device
@@ -237,6 +247,7 @@ void App::init(const char* argv0) {
         "fat1:/apps/WiiFin/wiifin.cfg",
         "usb:/apps/WiiFin/wiifin.cfg",
     };
+#endif
     // mkdirp: create each component of `dir` (e.g. "sd:/apps/WiiFin") only
     // if the device supports mkdir_r.  mkdir() only creates one level, so we
     // walk forward from the first '/' after the device prefix.
@@ -800,6 +811,12 @@ void App::loop() {
     GRRLIB_Exit();
     ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();
+#ifdef __3DS__
+    /* back to the Homebrew Launcher (the 3DS's HOME menu and power button
+     * are the system's) */
+    net_deinit();
+    return;
+#else
     /* launched by a loader (the Homebrew Channel's stub, where exit() goes
      * back): not the WAD's channel */
     const bool loader = memcmp((const void*)0x80001804, "STUBHAXX", 8) == 0;
@@ -851,6 +868,7 @@ void App::loop() {
         }
         SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
     }
+#endif
 }
 
 void App::run() {
