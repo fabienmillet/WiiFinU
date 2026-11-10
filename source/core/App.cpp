@@ -19,6 +19,7 @@
 #include "../platform/3ds/ui/Browse3ds.h"
 #include "../platform/3ds/ui/Connect3ds.h"
 #include "../platform/3ds/ui/Welcome3ds.h"
+#include "../platform/3ds/ui/Ui3ds.h"
 #endif
 #include "../jellyfin/JellyfinClient.h"
 #include "../jellyfin/RemoteControl.h"
@@ -80,6 +81,45 @@ static void* powerWatch(void*)
 bool showErrorScreen(const char* title, const std::string& line1,
                      const std::string& line2, bool retry, ir_t& ir)
 {
+#ifdef __3DS__
+    {   /* the 3DS: drawn 1:1, its buttons to tap */
+        using namespace Ui3ds;
+        Touch touch;
+        for (;;) {
+            Input::update();
+            Input::readIR(ir);
+            if (g_app_powerOff || g_app_reset) return false;
+            readTouch(ir, touch);
+            const Ui::Palette& p = Ui::pal();
+            bottomSpace();
+            background(BW, BH);
+            Ui::roundRect(12, 20, BW - 24, 168, 12, p.cardTop, p.cardBottom);
+            Ui::circle(34, 42, 10, p.danger);
+            textC(34, 34, "!", 14, 0xFFFFFFFF);
+            text(52, 34, title, 15, p.danger, BW - 76);
+            float y = 64;
+            y += paragraph(24, y, BW - 48, line1, 12, p.text, 3) + 6;
+            paragraph(24, y, BW - 48, line2, 11, p.textDim, 4);
+            textR(BW - 20, 172, APP_NAME " v" WIIFIN_VERSION, 9, p.textDim);
+            bool retryTap = false, backTap = false;
+            if (retry) {
+                button(16, 196, 140, 36, tr("Back"), 13, 0, false);
+                button(BW - 156, 196, 140, 36, tr("Retry"), 13, 1, true);
+                backTap = hit(touch, 16, 196, 140, 36);
+                retryTap = hit(touch, BW - 156, 196, 140, 36);
+            } else {
+                button(BW / 2 - 70, 196, 140, 36, tr("OK"), 13, 1, true);
+                backTap = hit(touch, BW / 2 - 70, 196, 140, 36);
+            }
+            setTopInfo(nullptr);
+            wiiSpace();
+            GRRLIB_Render();
+            const bool a = Input::isAJustPressed() && !touch.tap;
+            if (backTap || (Input::isBackPressed() && !touch.tap) || (!retry && a)) return false;
+            if (retryTap || (retry && a)) { SoundFX::play(SoundFX::FX::Start); return true; }
+        }
+    }
+#endif
     const Ui::Palette& p = Ui::pal();
     for (;;) {
         Input::update();

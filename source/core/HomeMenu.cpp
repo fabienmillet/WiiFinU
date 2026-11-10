@@ -21,6 +21,9 @@
  * Pauses BGM on entry; resumes only if musicEnabled is true (pass false
  * when calling from the player, since BGM is already paused for playback).
  * ----------------------------------------------------------------------- */
+#ifdef __3DS__
+#include "../platform/3ds/ui/HomeMenu3ds.inc"
+#else
 bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                        GRRLIB_texImg* cursorPointerTex, bool musicEnabled)
 {
@@ -255,3 +258,4 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         GRRLIB_Render();
     }
 }
+#endif
