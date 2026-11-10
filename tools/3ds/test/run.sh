@@ -35,7 +35,6 @@ while :; do
         t=${k%%:*}; key=${k#*:}
         if [ -z "${done[k$k]:-}" ] && [ "$ei" -ge "$t" ]; then
             done[k$k]=1
-            DISPLAY=$D xdotool key --window "$win" --delay 120 "$key" 2>/dev/null
             DISPLAY=$D xdotool keydown "$key" 2>/dev/null; sleep 0.15; DISPLAY=$D xdotool keyup "$key" 2>/dev/null
         fi
     done

@@ -2463,7 +2463,12 @@ int JellyfinClient::videoBitrate() const {
 }
 
 int JellyfinClient::qualityBitrate(int q) {
+#ifdef __3DS__
+    /* the 3DS: 400x240 at most, decoded in software (the old 3DS's 268 MHz) */
+    static const int bitrates[VIDEO_QUALITY_COUNT] = { 350000, 550000, 800000, 1200000 };
+#else
     static const int bitrates[VIDEO_QUALITY_COUNT] = { 1500000, 2500000, 3500000, 5000000 };
+#endif
     return bitrates[(q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1];
 }
 
@@ -2807,13 +2812,22 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     // the device profile declares explicit width/height constraints.
     measureLink(serverUrl, auth);
     const int videoBps = videoBitrate();
+#ifdef __3DS__
+    /* the 3DS's top screen: 400x240 */
+    #define WIIFIN_MAX_W "400"
+    #define WIIFIN_MAX_H "240"
+    static const int AUDIO_BPS = 96000;
+#else
+    #define WIIFIN_MAX_W "640"
+    #define WIIFIN_MAX_H "480"
     static const int AUDIO_BPS = 128000;
+#endif
     static const char* codecProfiles =
         "[{\"Type\":\"Video\",\"Codec\":\"mpeg4\",\"Conditions\":["
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Width\","
-            "\"Value\":\"640\",\"IsRequired\":true},"
+            "\"Value\":\"" WIIFIN_MAX_W "\",\"IsRequired\":true},"
         "{\"Condition\":\"LessThanEqual\",\"Property\":\"Height\","
-            "\"Value\":\"480\",\"IsRequired\":true}"
+            "\"Value\":\"" WIIFIN_MAX_H "\",\"IsRequired\":true}"
         "]}]";
 
     char subField[48] = "";
@@ -2827,7 +2841,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
         "\"AudioStreamIndex\":%d,"
         "%s"
         "\"MaxStreamingBitrate\":%d,"
-        "\"MaxWidth\":640,\"MaxHeight\":480,"
+        "\"MaxWidth\":" WIIFIN_MAX_W ",\"MaxHeight\":" WIIFIN_MAX_H ","
         "\"StartTimeTicks\":%lld,"
         "\"IsPlayback\":true,"
         "\"AutoOpenLiveStream\":true,"
@@ -2884,8 +2898,8 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     urlReplaceParam(relUrl, "AudioBitrate", abBuf);
     urlReplaceParam(relUrl, "VideoBitrate", vbBuf);
     urlReplaceParam(relUrl, "MaxVideoBitDepth", "8");
-    urlReplaceParam(relUrl, "MaxWidth", "640");
-    urlReplaceParam(relUrl, "MaxHeight", "480");
+    urlReplaceParam(relUrl, "MaxWidth", WIIFIN_MAX_W);
+    urlReplaceParam(relUrl, "MaxHeight", WIIFIN_MAX_H);
     /* why, for the server's dashboard: what kept the file from playing as
      * it is (else Jellyfin says DirectPlayError, direct play being off here) */
     if (!transcodeReasons.empty()) urlReplaceParam(relUrl, "TranscodeReasons", transcodeReasons.c_str());
