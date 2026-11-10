@@ -13,6 +13,7 @@
 #include <wiiuse/wpad.h>
 #include <ogc/pad.h>
 #include <ogc/lwp_watchdog.h>
+#include "../../ui/Ui.h"
 
 namespace {
 
@@ -24,6 +25,19 @@ float s_startX = 0, s_startY = 0;
 u64  s_touchStart = 0;
 bool s_dragged = false;
 circlePosition s_cpad = { 0, 0 };
+u16  s_inject = 0;                  /* a hint tapped: its button, one scan */
+
+/* a hint's button (Wii names) as the 3DS's (GameCube bits) */
+u16 hintButton(const char* b)
+{
+    static const struct { const char* wii; u16 pad; } MAP[] = {
+        { "A", PAD_BUTTON_A }, { "B", PAD_BUTTON_B }, { "1", PAD_BUTTON_Y }, { "2", PAD_BUTTON_X },
+        { "-", PAD_TRIGGER_L }, { "+", PAD_TRIGGER_R }, { "HOME", PAD_BUTTON_START }, { "+!", PAD_TRIGGER_Z },
+    };
+    for (const auto& m : MAP)
+        if (strcmp(b, m.wii) == 0) return m.pad;
+    return 0;
+}
 WPADData s_data;
 
 u16 toPad(u32 k)
@@ -66,6 +80,7 @@ s32 WPAD_ScanPads(void)
     }
     hidCircleRead(&s_cpad);
     s_tap = false;
+    s_inject = 0;
     const u64 now = ticks_to_millisecs(gettime());
     if (s_held & KEY_TOUCH) {
         touchPosition t;
@@ -84,6 +99,9 @@ s32 WPAD_ScanPads(void)
         s_touching = false;
         /* a tap: lifted where it touched, not held for long */
         s_tap = !s_dragged && now - s_touchStart < 800;
+        /* on a button hint: that button rather than A where it is */
+        const char* h = s_tap ? Ui::hintAt(s_x, s_y) : nullptr;
+        if (h && (s_inject = hintButton(h)) != 0) s_tap = false;
     }
     return 0;
 }
@@ -121,8 +139,8 @@ s32 WPAD_Probe(int chan, u32* type)
 
 u32 PAD_Init(void) { return 1; }
 u32 PAD_ScanPads(void) { return 1; }
-u16 PAD_ButtonsHeld(int pad) { return pad == 0 ? toPad(s_held) : 0; }
-u16 PAD_ButtonsDown(int pad) { return pad == 0 ? toPad(s_down) : 0; }
+u16 PAD_ButtonsHeld(int pad) { return pad == 0 ? toPad(s_held) | s_inject : 0; }
+u16 PAD_ButtonsDown(int pad) { return pad == 0 ? toPad(s_down) | s_inject : 0; }
 
 /* the circle pad (about +-155) as the GameCube stick (about +-100) */
 s8 PAD_StickX(int pad)

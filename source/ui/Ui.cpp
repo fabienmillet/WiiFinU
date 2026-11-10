@@ -576,11 +576,38 @@ static void plusGlyph(float cx, float cy, u32 c)
     roundRect(cx - 1.25f, cy - 4.5f, 2.5f, 9, 1.25f, c);
 }
 
+#ifdef __3DS__
+/* The hints drawn lately, where: a tap on one is its button (the touch
+ * screen alone, without a gamepad) */
+static struct HintSpot { float x0, x1, y0, y1; const char* button; u64 at; } s_spots[32];
+static int s_spotNext = 0;
+static void spot(float x0, float x1, float y, const char* button)
+{
+    s_spots[s_spotNext] = { x0, x1, y - 8, y + 26, button, ticks_to_millisecs(gettime()) };
+    s_spotNext = (s_spotNext + 1) % 32;
+}
+const char* hintAt(float x, float y)
+{
+    const u64 now = ticks_to_millisecs(gettime());
+    for (const HintSpot& h : s_spots)
+        if (h.button && now - h.at < 150 && x >= h.x0 && x < h.x1 && y >= h.y0 && y < h.y1)
+            return h.button;
+    return nullptr;
+}
+#endif
+
 float hint(float x, float y, const Hint& h)
 {
     const Palette& p = pal();
     const char* b = buttonName(h.button);
     float cy = y + 9, w = glyphWidth(b);
+#ifdef __3DS__
+    {
+        const float total = hintWidth(h);
+        if (strcmp(h.button, "-/+") == 0) { spot(x, x + 20, y, "-"); spot(x + 20, x + total, y, "+"); }
+        else if (strcmp(h.button, "UD") != 0 && strcmp(h.button, "LR") != 0) spot(x, x + total, y, h.button);
+    }
+#endif
     u32 tc = p.text;
     if (w == 0) {
         /* plain caption */

@@ -149,6 +149,11 @@ float tabs(float cx, float y, const char* const* names, int n, int sel, int size
 /* The tab under (x, y) on the bar tabs() drew last (in the last 100 ms:
  * still on the screen), -1 none */
 int tabAt(float x, float y);
+#ifdef __3DS__
+/* The button of the hint drawn at (x, y) lately (its Wii name: "B", "1",
+ * "-", "HOME", "+!"...), nullptr none: a tap there presses it */
+const char* hintAt(float x, float y);
+#endif
 /* Round up/down arrow button (page arrows, scrolling lists).  Disabled
  * buttons are faded; hovering grows the button and lights its ring. */
 void arrowButton(float cx, float cy, bool up, bool enabled, bool hover);

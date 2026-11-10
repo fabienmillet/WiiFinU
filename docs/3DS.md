@@ -13,7 +13,7 @@ Settings, profiles and the log (`wiifin.log`, for bug reports) are kept in `sdmc
 
 ## The two screens
 
-- **Bottom screen (touch)**: the menus. Touch what you want: a tap is the Wii Remote's A where you tapped. Everything can also be done with the buttons.
+- **Bottom screen (touch)**: the menus. Touch what you want: a tap is the Wii Remote's A where you tapped. The button hints at the bottom (B Back, Y Search, START Menu...) can be tapped too: the stylus alone does everything. Everything can also be done with the buttons.
 - **Top screen**: the video while one plays, with its subtitles; otherwise WiiFin's logo, the clock and the music playing.
 
 ## Buttons
