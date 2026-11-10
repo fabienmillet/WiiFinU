@@ -1286,6 +1286,19 @@ VideoSurface::Zoom VideoSurface::zoom() { return s_zoom; }
 
 bool Player3ds::videoActive() { return s_videoActive; }
 
+namespace {
+void (*s_overlay)(void*) = nullptr;
+void* s_overlayCtx = nullptr;
+unsigned s_overlayFrame = ~0u;
+}
+
+void Player3ds::setTopOverlay(void (*draw)(void*), void* ctx)
+{
+    s_overlay = draw;
+    s_overlayCtx = ctx;
+    s_overlayFrame = Gfx3ds::frames();
+}
+
 bool Player3ds::drawTop()
 {
     if (!s_videoActive) return false;
@@ -1317,5 +1330,7 @@ bool Player3ds::drawTop()
     GX_End();
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
     GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
+    /* asked this frame (the view that asked still there) */
+    if (s_overlay && s_overlayFrame == Gfx3ds::frames()) s_overlay(s_overlayCtx);
     return true;
 }

@@ -10,6 +10,7 @@
 #include "Player3ds.h"
 #include "../../ui/Ui.h"
 #include "../../core/Lang.h"
+#include "../../player/WiiPlayer.h"
 
 #include <3ds.h>
 #include <time.h>
@@ -62,6 +63,16 @@ void drawTop()
     if (!s_caption.empty()) Ui::textCentered(400, 400, s_caption.c_str(), 28, p.textDim);
 }
 
+aptHookCookie s_hook;
+
+/* The HOME menu or the lid closed during a video: it pauses (as the
+ * Wii's HOME menu does) */
+void onApt(APT_HookType type, void*)
+{
+    if ((type == APTHOOK_ONSUSPEND || type == APTHOOK_ONSLEEP) && Player3ds::videoActive() && !g_mplayer_paused)
+        wii_player_pause_toggle();
+}
+
 } // namespace
 
 namespace Platform3ds {
@@ -74,6 +85,7 @@ void init()
     APT_SetAppCpuTimeLimit(30);
     Gfx3ds::init();
     Gfx3ds::setTopDrawer(drawTop);
+    aptHook(&s_hook, onApt, nullptr);
 }
 
 void setTopCaption(const std::string& s) { s_caption = s; }

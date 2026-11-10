@@ -29,6 +29,9 @@ extern const u8  wiifin_shbin[];
 extern const u32 wiifin_shbin_size;
 }
 
+/* App.cpp: leave (the views unwind on it) */
+extern volatile bool g_app_reset;
+
 struct Tex3ds {
     u32     magic;          /* TEX_MAGIC: GX_InitTexObj tells it from texels */
     C3D_Tex tex;
@@ -76,13 +79,17 @@ u8    s_boundFilter = 0xFF;
 int   s_clip[4] = { 0, 0, -1, -1 };
 bool  s_clipDirty = true;
 
-/* immediate mode */
+/* immediate mode: a primitive's vertices are gathered, made triangles at
+ * GX_End and added to the batch, drawn in one call until the state
+ * (texture, matrix, scissor) changes: the GPU's command buffer holds a
+ * frame of WiiFin's thousands of small shapes and glyphs that way */
 u8    s_prim = 0;
-int   s_first = 0;                   /* first vertex of this GX_Begin */
 Vertex s_cur;
-int   s_quadN = 0;                   /* vertices of the current quad so far */
-Vertex s_quad[4];
-bool  s_dropping = false;
+const int MAX_PRIM = 4096;
+Vertex s_prim_v[MAX_PRIM];
+int   s_primN = 0;
+int   s_batchFirst = 0, s_batchN = 0;
+bool  s_batchTex = false;
 
 /* frame (GX's frame pixels) -> screen pixels */
 const float FRAME_TO_SCREEN = 0.5f;
@@ -171,6 +178,8 @@ void beginFrame()
     s_matDirty = s_clipDirty = true;
     s_envState = -1;
     s_boundTex = nullptr;
+    s_batchN = 0;
+    s_batchFirst = 0;
 }
 
 void setEnv(bool tex)
@@ -197,14 +206,13 @@ inline void colorOf(u32 c, Vertex& v)
     v.a = (c & 0xFF) / 255.0f;
 }
 
-inline void put(const Vertex& v)
+inline void put(const Vertex& v) { s_vbo[s_vcount++] = v; }
+
+void flushBatch()
 {
-    if (s_vcount >= MAX_VERTS) {
-        if (!s_overflowLogged) { s_overflowLogged = true; SYS_Report("[Gfx3ds] vertex buffer full\n"); }
-        s_dropping = true;
-        return;
-    }
-    s_vbo[s_vcount++] = v;
+    if (s_batchN > 0) C3D_DrawArrays(GPU_TRIANGLES, s_batchFirst, s_batchN);
+    s_batchN = 0;
+    s_batchFirst = s_vcount;
 }
 
 /* ---- textures ------------------------------------------------------------ */
@@ -236,7 +244,6 @@ GPU_TEXCOLOR gpuFmt(Gfx3ds::Fmt f)
     }
 }
 
-int bppOf(Gfx3ds::Fmt f) { return f == Gfx3ds::Fmt::RGBA8 ? 4 : 2; }
 
 /* pixel (x, y) of the source (shrunk by `shift`: 1 = every other) into the
  * texture, the edges repeated over the padding */
@@ -326,7 +333,7 @@ void init()
     if (s_gfxUp) return;
     gfxInitDefault();
     gfxSet3D(false);
-    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE * 2);
+    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE * 4);
     const u32 flags = GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) |
                       GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) |
                       GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO);
@@ -565,9 +572,7 @@ void GX_Begin(u8 prim, u8 fmt, u16 n)
     (void)fmt; (void)n;
     beginFrame();
     s_prim = prim;
-    s_first = s_vcount;
-    s_quadN = 0;
-    s_dropping = false;
+    s_primN = 0;
     memset(&s_cur, 0, sizeof(s_cur));
     s_cur.r = s_cur.g = s_cur.b = s_cur.a = 1.0f;
 }
@@ -576,16 +581,7 @@ void GX_Begin(u8 prim, u8 fmt, u16 n)
  * attribute (texcoord when texturing, else colour) */
 static void emit()
 {
-    if (s_prim == GX_QUADS) {
-        s_quad[s_quadN++] = s_cur;
-        if (s_quadN == 4) {
-            put(s_quad[0]); put(s_quad[1]); put(s_quad[2]);
-            put(s_quad[0]); put(s_quad[2]); put(s_quad[3]);
-            s_quadN = 0;
-        }
-    } else {
-        put(s_cur);
-    }
+    if (s_primN < MAX_PRIM) s_prim_v[s_primN++] = s_cur;
 }
 
 static bool texturing() { return s_texOn && s_tevMode != GX_PASSCLR && s_curTex; }
@@ -606,22 +602,49 @@ void GX_TexCoord2f32(f32 s, f32 t)
 
 void GX_End(void)
 {
-    const int n = s_vcount - s_first;
-    if (n <= 0 || s_dropping) { s_vcount = s_first; return; }
-    if (s_matDirty) applyMatrix();
-    if (s_clipDirty) applyClip();
-    const bool tex = texturing();
-    setEnv(tex);
-    if (tex && (s_boundTex != s_curTex || s_boundFilter != s_curFilter)) {
-        GPU_TEXTURE_FILTER_PARAM f = s_curFilter == GX_NEAR ? GPU_NEAREST : GPU_LINEAR;
-        C3D_TexSetFilter(&s_curTex->tex, f, f);
-        C3D_TexBind(0, &s_curTex->tex);
-        s_boundTex = s_curTex;
-        s_boundFilter = s_curFilter;
+    const int n = s_primN;
+    int tris = s_prim == GX_QUADS ? n / 4 * 2 : s_prim == GX_TRIANGLES ? n / 3 : n >= 3 ? n - 2 : 0;
+    if (tris <= 0) return;
+    if (s_vcount + tris * 3 > MAX_VERTS) {
+        if (!s_overflowLogged) { s_overflowLogged = true; SYS_Report("[Gfx3ds] vertex buffer full\n"); }
+        return;
     }
-    GPU_Primitive_t p = s_prim == GX_TRIANGLESTRIP ? GPU_TRIANGLE_STRIP :
-                        s_prim == GX_TRIANGLEFAN   ? GPU_TRIANGLE_FAN : GPU_TRIANGLES;
-    C3D_DrawArrays(p, s_first, n);
+    const bool tex = texturing();
+    GPU_TEXTURE_FILTER_PARAM f = s_curFilter == GX_NEAR ? GPU_NEAREST : GPU_LINEAR;
+    const bool texChange = tex && (s_boundTex != s_curTex || s_boundFilter != s_curFilter);
+    /* another state: what was gathered is drawn first */
+    if (s_matDirty || s_clipDirty || tex != s_batchTex || texChange) {
+        flushBatch();
+        if (s_matDirty) applyMatrix();
+        if (s_clipDirty) applyClip();
+        setEnv(tex);
+        if (texChange) {
+            C3D_TexSetFilter(&s_curTex->tex, f, f);
+            C3D_TexBind(0, &s_curTex->tex);
+            s_boundTex = s_curTex;
+            s_boundFilter = s_curFilter;
+        }
+        s_batchTex = tex;
+    }
+    const Vertex* v = s_prim_v;
+    switch (s_prim) {
+    case GX_QUADS:
+        for (int i = 0; i + 3 < n; i += 4) {
+            put(v[i]); put(v[i + 1]); put(v[i + 2]);
+            put(v[i]); put(v[i + 2]); put(v[i + 3]);
+        }
+        break;
+    case GX_TRIANGLEFAN:
+        for (int i = 1; i + 1 < n; ++i) { put(v[0]); put(v[i]); put(v[i + 1]); }
+        break;
+    case GX_TRIANGLESTRIP:
+        for (int i = 0; i + 2 < n; ++i) { put(v[i]); put(v[i + 1]); put(v[i + 2]); }
+        break;
+    default:
+        for (int i = 0; i + 2 < n; i += 3) { put(v[i]); put(v[i + 1]); put(v[i + 2]); }
+        break;
+    }
+    s_batchN += tris * 3;
 }
 
 /* ---- GRRLIB -------------------------------------------------------------- */
@@ -644,6 +667,7 @@ void GRRLIB_Exit(void)
 void GRRLIB_Render(void)
 {
     beginFrame();
+    flushBatch();
     if (s_topDrawer) {
         /* the top screen: its own 800x480 space */
         float proj[4][4], mv[3][4], vp[4], gmv[3][4];
@@ -660,15 +684,24 @@ void GRRLIB_Render(void)
         s_clip[2] = -1;
         s_matDirty = s_clipDirty = true;
         s_topDrawer();
+        flushBatch();
         memcpy(s_proj, proj, sizeof(proj)); memcpy(s_mv, mv, sizeof(mv));
         memcpy(s_vp, vp, sizeof(vp)); memcpy(s_clip, clip, sizeof(clip));
         memcpy(GXmodelView2D, gmv, sizeof(gmv));
         s_onTop = false;
         s_matDirty = s_clipDirty = true;
     }
+    flushBatch();
+    {   /* how full the GPU's command buffer got (it drops what doesn't fit) */
+        static float s_maxUse = 0;
+        float use = C3D_GetCmdBufUsage();
+        if (use > s_maxUse + 0.1f) { s_maxUse = use; SYS_Report("[Gfx3ds] command buffer %.0f%% used\n", use * 100); }
+    }
     C3D_FrameEnd(0);
     s_inFrame = false;
     ++s_frames;
+    /* the system's events (HOME menu, sleep, the app closed from there) */
+    if (!aptMainLoop()) g_app_reset = true;
     if (s_bottomOff != s_bottomIsOff) {
         gspLcdInit();
         if (s_bottomOff) GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTTOM);

@@ -116,7 +116,12 @@ private:
     int         rebufPercent = -1;
     Trickplay*  trickplay = nullptr;
     Subtitles*  subtitles = nullptr;
-    void drawSubtitle(float bottom);
+    /* its last line ending at y = bottom, centred on cx, lines at most
+     * maxW wide (< 0: the screen's) */
+    void drawSubtitle(float bottom, float cx = -1, float maxW = -1, int size = 24);
+#ifdef __3DS__
+    static void subtitleOnTop(void* view);   /* the 3DS: over the video, on the top screen */
+#endif
 
     Panel panel        = Panel::None;
     int   panelSel     = 0;

@@ -6,6 +6,9 @@
 #include "VideoSurface.h"
 #include "Trickplay.h"
 #include "Subtitles.h"
+#ifdef __3DS__
+#include "../platform/3ds/Player3ds.h"
+#endif
 #include "../input/Input.h"
 
 #include <ogc/lwp_watchdog.h>
@@ -207,12 +210,13 @@ void PlayerView::seekInPlace()
 
 /* The current cue, lines wrapped to the screen, white with a black outline
  * (readable on any picture), its last line ending at y = bottom. */
-void PlayerView::drawSubtitle(float bottom)
+void PlayerView::drawSubtitle(float bottom, float cx, float maxW, int size)
 {
     const Subtitles::Cue* cue = subtitles->at(position());
     if (!cue) return;
-    const int SIZE = 24, LINE_H = 29;
-    const float maxW = Ui::screenWidth() - 60;
+    const int SIZE = size, LINE_H = size * 29 / 24;
+    if (maxW < 0) maxW = Ui::screenWidth() - 60;
+    if (cx < 0) cx = (Ui::screenLeft() + Ui::screenRight()) * 0.5f;
     std::vector<std::string> lines;
     size_t p = 0;
     while (p <= cue->text.size()) {
@@ -241,7 +245,6 @@ void PlayerView::drawSubtitle(float bottom)
     }
     if (lines.size() > 4) lines.erase(lines.begin(), lines.end() - 4);
     float y = bottom - lines.size() * LINE_H;
-    const float cx = (Ui::screenLeft() + Ui::screenRight()) * 0.5f;
     static const float OFF[8][2] = { {-2,0},{2,0},{0,-2},{0,2},{-1.5f,-1.5f},{1.5f,-1.5f},{-1.5f,1.5f},{1.5f,1.5f} };
     for (const std::string& l : lines) {
         for (const auto& o : OFF) Ui::textCentered(cx + o[0], y + o[1], l.c_str(), SIZE, 0x000000E0);
@@ -249,6 +252,14 @@ void PlayerView::drawSubtitle(float bottom)
         y += LINE_H;
     }
 }
+
+#ifdef __3DS__
+/* the top screen's 800x480 space; a bigger size: it is half as big */
+void PlayerView::subtitleOnTop(void* view)
+{
+    static_cast<PlayerView*>(view)->drawSubtitle(468.0f, 400.0f, 760.0f, 30);
+}
+#endif
 
 void PlayerView::toast(const std::string& msg, int ms)
 {
@@ -540,10 +551,15 @@ void PlayerView::render(const ir_t& ir)
     const float k = controlsAlpha;
 
     /* Subtitles: at the bottom, lifted over the control panel when it shows */
+#ifdef __3DS__
+    /* the 3DS: on the top screen, over the picture */
+    if (subtitles && !subtitles->empty()) Player3ds::setTopOverlay(subtitleOnTop, this);
+#else
     if (subtitles && !subtitles->empty()) {
         const float e = 1 - (1 - k) * (1 - k);
         drawSubtitle(452.0f + (PANEL_Y - 12.0f - 452.0f) * e);
     }
+#endif
 
     /* ---- Loading / busy ---- */
     const bool stalled = buffering() || rebufPercent >= 0;
