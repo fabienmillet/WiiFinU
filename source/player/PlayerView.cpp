@@ -591,7 +591,11 @@ void PlayerView::render(const ir_t& ir)
         {
             /* zoom has a button on the Classic (ZR) and GameCube (Z) only */
             const Ui::ButtonStyle bs = Ui::buttonStyle();
+#ifdef __3DS__
+            const Ui::Hint all[] = { { "SELECT", N_("Zoom") },
+#else
             const Ui::Hint all[] = { { bs == Ui::ButtonStyle::GameCube ? "Z" : "ZR", N_("Zoom") },
+#endif
                                      { "1", N_("Audio") }, { "2", N_("Subtitles") }, { "B", N_("Back") } };
             const Ui::Hint* hints = bs == Ui::ButtonStyle::WiiRemote ? all + 1 : all;
             const int nHints = bs == Ui::ButtonStyle::WiiRemote ? 3 : 4;

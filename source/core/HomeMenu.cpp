@@ -35,7 +35,15 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
     const int BTN_Y = 195;
     const int B0X   =  65;
     const int B1X   = 345;
+#ifdef __3DS__
+    /* the 3DS: Exit (to the Homebrew Launcher) alone, in the middle; the
+     * console's own HOME button is the system's menu */
+    const int NB = 1;
+    float bcx[2] = { 320.0f, 320.0f };
+#else
+    const int NB = 2;
     float bcx[2] = { B0X + BTN_W * 0.5f, B1X + BTN_W * 0.5f };
+#endif
     float bcy    = BTN_Y + BTN_H * 0.5f;
 
     /* Confirmation dialog layout — centred on 640×480 */
@@ -87,7 +95,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             if (Input::isBPressed() || home) { if (musicEnabled) MusicBGM::resume(); return false; }
 
             if (ir.valid) {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < NB; i++) {
                     float hw = BTN_W * hoverSc[i] * 0.5f;
                     float hh = BTN_H * hoverSc[i] * 0.5f;
                     if (irX >= bcx[i] - hw && irX <= bcx[i] + hw &&
@@ -111,7 +119,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
                 popSel     = 1;
             }
             if (Input::isLeftPressed()  || Input::isUpPressed())   hmSel = 0;
-            if (Input::isRightPressed() || Input::isDownPressed())  hmSel = 1;
+            if (Input::isRightPressed() || Input::isDownPressed())  hmSel = NB - 1;
             for (int i = 0; i < 2; i++) {
                 float t = (hover == i) ? 1.10f : 1.0f;
                 hoverSc[i] += (t - hoverSc[i]) * 0.18f;
@@ -187,12 +195,16 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         Ui::popOffset();
 
         /* Wii Menu / Reset buttons */
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < NB; i++) {
             float sc = hoverSc[i];
             float dw = BTN_W * sc, dh = BTN_H * sc;
             bool  sel = (hmSel == i);
             Ui::button(bcx[i] - dw * 0.5f, bcy - dh * 0.5f, dw, dh,
+#ifdef __3DS__
+                       N_("Exit"), (int)(22 * sc),
+#else
                        i == 0 ? N_("Wii Menu") : N_("Reset"), (int)(22 * sc),
+#endif
                        sel ? Ui::pulse() : 0.0f);
         }
 
@@ -206,9 +218,13 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             float adx = 320 - adw * 0.5f, ady = 240 - adh * 0.5f;
             Ui::card(adx, ady, adw, adh, 20 * psc, 0.0f);
 
+#ifdef __3DS__
+            const char* line1 = tr("Back to the Homebrew Launcher?");
+#else
             const char* line1 = (confirmFor == 0)
                 ? tr("Return to the Wii Menu?")
                 : tr("Reset the application?");
+#endif
             Ui::textCentered(320, ady + 32 * psc, line1, (int)(20 * psc), P.text);
             Ui::textCentered(320, ady + 62 * psc, tr("(Anything not saved will be lost.)"),
                              (int)(14 * psc), P.textDim);

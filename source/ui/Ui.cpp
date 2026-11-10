@@ -494,13 +494,22 @@ static void dpadGlyph(float cx, float cy, bool vertical, u32 c)
 
 /* Width of the glyph drawn for a hint button (0 = label only). */
 static ButtonStyle s_buttonStyle = ButtonStyle::WiiRemote;
+#ifdef __3DS__
+/* the 3DS's buttons are named as a GameCube controller's (Y, X, L, R, START) */
+void        setButtonStyle(ButtonStyle s) { (void)s; s_buttonStyle = ButtonStyle::GameCube; }
+#else
 void        setButtonStyle(ButtonStyle s) { s_buttonStyle = s; }
+#endif
 ButtonStyle buttonStyle()                 { return s_buttonStyle; }
 
 const char* buttonName(const char* b)
 {
     /* "+!": + as an action of its own (Input::isActionPressed), Z on a
      * GameCube controller (its R, the page turner, is a trigger) */
+#ifdef __3DS__
+    /* Z: ZL / ZR on a New 3DS, SELECT on any */
+    if (strcmp(b, "+!") == 0) return "SELECT";
+#endif
     if (strcmp(b, "+!") == 0) return s_buttonStyle == ButtonStyle::GameCube ? "Z" : "+";
     if (s_buttonStyle == ButtonStyle::WiiRemote) return b;
     static const struct { const char* wii; const char* classic; const char* gc; } MAP[] = {
@@ -523,10 +532,12 @@ static void buttonDisc(float cx, float cy, const char* b, u32& textColor)
     const Palette& p = pal();
     u32 fill = p.cardTop;
     textColor = p.text;
+#ifndef __3DS__   /* the 3DS's A and B are grey */
     if (s_buttonStyle == ButtonStyle::GameCube && (b[0] == 'A' || b[0] == 'B') && !b[1]) {
         fill = b[0] == 'A' ? 0x2FB56AFF : 0xD8463CFF;
         textColor = 0xFFFFFFFF;
     }
+#endif
     /* the Wii Remote's B is a trigger: a square, as in the Wii's own menus */
     if (s_buttonStyle == ButtonStyle::WiiRemote && b[0] == 'B' && !b[1]) {
         roundRect(cx - 9, cy - 9, 18, 18, 4.5f, p.cardBorder);

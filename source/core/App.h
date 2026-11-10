@@ -46,7 +46,11 @@ private:
     void runOnboarding(SavedProfile& p);
     /* the passcode of a profile asked; false: B (or power) */
     bool askPasscode(const SavedProfile& p);
+#ifdef __3DS__
+    bool screenAreaAsked = true;       // the 3DS: no TV to fit
+#else
     bool screenAreaAsked = false;      // first-launch offer to fit the TV made
+#endif
     bool testOnboarding  = false;      // tests: the first profile opened is asked as a new one
     void offerScreenCalibration(ir_t& ir);
 };

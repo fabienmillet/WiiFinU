@@ -230,6 +230,9 @@ msgstr "Menu Wii"
 msgid "Return to the Wii Menu?"
 msgstr "Retourner au Menu Wii ?"
 
+msgid "Back to the Homebrew Launcher?"
+msgstr "Retourner au Homebrew Launcher ?"
+
 #: source/core/HomeMenu.cpp:211
 msgid "Reset the application?"
 msgstr "Réinitialiser l'application ?"

@@ -57,8 +57,14 @@ void SettingsView::openSection(int s) {
     for (float& f : focusAnim) f = 0.0f;
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
+#ifdef __3DS__
+    /* the 3DS: no TV to fit, no disc slot, its own screens' refresh */
+    else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
+                              R_SSL, R_QUALITY, R_DIRECT };
+#else
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
                               R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };
+#endif
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
 }

@@ -193,7 +193,11 @@ void App::init(const char* argv0) {
     // Load textures and fonts from embedded data (no file I/O, always fast)
     logoTex   = GRRLIB_LoadTexture(logo_wiifin_png);
     btnTex    = GRRLIB_LoadTexture(button_start_png);
+#ifdef __3DS__
+    cursorPointerTex    = nullptr;   /* the stylus points: no pointer drawn */
+#else
     cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
+#endif
     font   = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
     jpFont = GRRLIB_LoadTTF(jp_font_ttf, jp_font_ttf_len);
     Text::setFallback(jpFont);   /* Japanese titles, subtitles... in any text */
@@ -381,6 +385,11 @@ void App::loadSdFonts(const std::string& dir)
 /* First launch: CRT TVs cut the edges of the picture (overscan) and their
  * owners rarely find Settings > Screen Area by themselves.  Offered once. */
 void App::offerScreenCalibration(ir_t& ir) {
+#ifdef __3DS__
+    (void)ir;
+    screenAreaAsked = true;   /* the 3DS: no TV */
+    return;
+#endif
     int l, t, r, b;
     Ui::safeArea(l, t, r, b);
     if (screenAreaAsked || l || t || r || b) { screenAreaAsked = true; return; }
