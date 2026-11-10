@@ -57,8 +57,12 @@ void SettingsView::openSection(int s) {
     selectedIndex = 0;
     pageAnim = 0.0f;
     for (float& f : focusAnim) f = 0.0f;
+#ifdef __3DS__   /* the 3DS's screens have one home and one library view */
+    if (s == 0) rows = { R_THEME, R_BACKGROUNDS };
+#else
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
+#endif
 #ifdef __3DS__
     /* the 3DS: no TV to fit, no disc slot, its own screens' refresh; every
      * video converted to its size (files as they are are too heavy) */

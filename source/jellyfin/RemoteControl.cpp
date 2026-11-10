@@ -235,7 +235,7 @@ bool wsOpen(Ws& w, std::string& err) {
      * the server (newer ones refuse a token in the URL) */
     std::string req = "GET " + s_path + "/socket?deviceId=" + JellyfinClient::deviceId() + " HTTP/1.1\r\n"
                       "Host: " + host + "\r\n"
-                      "Authorization: MediaBrowser Client=\"WiiFin\", Device=\"Nintendo Wii\", "
+                      "Authorization: MediaBrowser Client=\"" WIIFIN_CLIENT_NAME "\", Device=\"" WIIFIN_DEVICE_NAME "\", "
                       "DeviceId=\"" + JellyfinClient::deviceId() + "\", Version=\"" WIIFIN_VERSION "\", "
                       "Token=\"" + s_token + "\"\r\n"
                       "Upgrade: websocket\r\nConnection: Upgrade\r\n"

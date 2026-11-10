@@ -1085,7 +1085,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
         "%s %s HTTP/1.1\r\n"
         "Host: %s\r\n"
         "Connection: keep-alive\r\n"
-        "Authorization: MediaBrowser Client=\"WiiFin\", Device=\"Nintendo Wii\", "
+        "Authorization: MediaBrowser Client=\"" WIIFIN_CLIENT_NAME "\", Device=\"" WIIFIN_DEVICE_NAME "\", "
         "DeviceId=\"%s\", Version=\"" WIIFIN_VERSION "\"%s\r\n"
         "%s"
         "Content-Length: %zu\r\n"

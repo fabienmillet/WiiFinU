@@ -1999,3 +1999,134 @@ msgstr "PM"
 #: source/ui/Ui.cpp:946
 msgid "Message"
 msgstr "Message"
+
+# The 3DS version's screens (source/platform/3ds/ui) and its wording
+
+msgid "Add an account"
+msgstr "Ajouter un compte"
+
+msgid "Anyone who opens the app can then open this profile"
+msgstr "Toute personne qui ouvre l'appli pourra alors ouvrir ce profil"
+
+msgid "Asking the server for a code"
+msgstr "Demande d'un code au serveur"
+
+msgid "Check the console's Internet settings, then try again."
+msgstr "Vérifiez les paramètres Internet de la console, puis réessayez."
+
+msgid "Chosen here, whatever the console's language"
+msgstr "Choisie ici, quelle que soit la langue de la console"
+
+msgid "Enter this code in Quick Connect"
+msgstr "Entrez ce code dans Connexion rapide"
+
+msgid "Episode %d of %d"
+msgstr "Épisode %d sur %d"
+
+msgid "Episodes"
+msgstr "Épisodes"
+
+msgid "Fill"
+msgstr "Remplir"
+
+msgid "Find"
+msgstr "Chercher"
+
+msgid "Fit"
+msgstr "Ajuster"
+
+msgid "From the start"
+msgstr "Depuis le début"
+
+msgid "Get a code"
+msgstr "Obtenir un code"
+
+msgid "Jellyfin servers on this network"
+msgstr "Serveurs Jellyfin sur ce réseau"
+
+msgid "Latest in %s"
+msgstr "Nouveautés : %s"
+
+msgid "Light and bright"
+msgstr "Clair et lumineux"
+
+msgid "Looking for servers"
+msgstr "Recherche de serveurs"
+
+msgid "My Media"
+msgstr "Mes médias"
+
+msgid "No results"
+msgstr "Aucun résultat"
+
+msgid "No server answered on this network. Its address can be typed in Sign in."
+msgstr "Aucun serveur n'a répondu sur ce réseau. Son adresse peut être saisie dans Connexion."
+
+msgid "Nothing here yet"
+msgstr "Rien ici pour l'instant"
+
+msgid "Opens at once on this console"
+msgstr "S'ouvre directement sur cette console"
+
+msgid "Or Quick Connect: this profile keeps no sign-in on the console"
+msgstr "Ou la connexion rapide : ce profil ne garde aucune connexion sur la console"
+
+msgid "Quick Connect signs in without typing a password: a code appears here, to approve in another Jellyfin app."
+msgstr "La connexion rapide connecte sans taper de mot de passe : un code s'affiche ici, à valider dans une autre appli Jellyfin."
+
+msgid "Red and charcoal"
+msgstr "Rouge et anthracite"
+
+msgid "Resume"
+msgstr "Reprendre"
+
+msgid "Server address"
+msgstr "Adresse du serveur"
+
+msgid "Server address (http://...:8096)"
+msgstr "Adresse du serveur (http://...:8096)"
+
+msgid "Sign in"
+msgstr "Connexion"
+
+msgid "Sign in automatically on this console?"
+msgstr "Se connecter automatiquement sur cette console ?"
+
+msgid "Sign in with a code, no password typed"
+msgstr "Connexion avec un code, sans mot de passe"
+
+msgid "Soft gradients"
+msgstr "Dégradés doux"
+
+msgid "Tap a field to type it with the keyboard. L / R: the tabs. B: back."
+msgstr "Touchez un champ pour le saisir au clavier. L / R : les onglets. B : retour."
+
+msgid "The console must be on the same network as the server."
+msgstr "La console doit être sur le même réseau que le serveur."
+
+msgid "The console's language, as set in its System Settings"
+msgstr "La langue de la console, réglée dans ses Paramètres de la console"
+
+msgid "The server didn't answer: try again"
+msgstr "Le serveur n'a pas répondu : réessayez"
+
+msgid "The video comes in, but the console can't show it: the picture stays stuck."
+msgstr "La vidéo arrive, mais la console ne peut pas l'afficher : l'image reste figée."
+
+msgid "This is taking long: the console's network may need a restart."
+msgstr "C'est long : le réseau de la console a peut-être besoin d'être relancé."
+
+msgid "Too heavy for the console: transcoding..."
+msgstr "Trop lourd pour la console : conversion..."
+
+msgid "User name"
+msgstr "Nom d'utilisateur"
+
+msgid "X again: remove this profile"
+msgstr "X encore : supprimer ce profil"
+
+msgid "Your Jellyfin server's address, user name and password"
+msgstr "L'adresse de votre serveur Jellyfin, votre nom d'utilisateur et votre mot de passe"
+
+msgid "in another Jellyfin app signed in to this server:"
+msgstr "dans une autre appli Jellyfin connectée à ce serveur :"

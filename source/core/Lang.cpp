@@ -69,8 +69,56 @@ void update() {
 
 } // namespace
 
+#ifdef __3DS__
+/* The 3DS says "the console" where the Wii's interface says "the Wii": its
+ * own English, translated in turn (the lang folder) */
+static const char* forThe3ds(const char* en)
+{
+    static const struct { const char* wii; const char* ds; } MAP[] = {
+        { "Anyone who opens WiiFin can then open this profile",
+          "Anyone who opens the app can then open this profile" },
+        { "Chosen here, whatever the Wii's language",
+          "Chosen here, whatever the console's language" },
+        { "Light, like the Wii Menu",
+          "Light and bright" },
+        { "Opens at once on this Wii",
+          "Opens at once on this console" },
+        { "Or Quick Connect: this profile keeps no sign-in on the Wii",
+          "Or Quick Connect: this profile keeps no sign-in on the console" },
+        { "Sign in automatically on this Wii?",
+          "Sign in automatically on this console?" },
+        { "Soft gradients, like the Wii Menu",
+          "Soft gradients" },
+        { "The video comes in, but the Wii can't show it: the picture stays stuck.",
+          "The video comes in, but the console can't show it: the picture stays stuck." },
+        { "The Wii's language, as set in the Wii Settings",
+          "The console's language, as set in its System Settings" },
+        { "Too heavy for the Wii: transcoding...",
+          "Too heavy for the console: transcoding..." },
+        { "Check the Wii's Internet settings, then try again.",
+          "Check the console's Internet settings, then try again." },
+        { "The Wii must be on the same network as the server.",
+          "The console must be on the same network as the server." },
+        { "This is taking long: the Wii's network may need a restart.",
+          "This is taking long: the console's network may need a restart." },
+        { "Red and charcoal, browse in rows like the old video channels",
+          "Red and charcoal" },
+        { "Wii Menu",
+          "Exit" },
+        { "WiiFin Menu",
+          "Menu" },
+    };
+    for (const auto& m : MAP)
+        if (strcmp(en, m.wii) == 0) return m.ds;
+    return en;
+}
+#endif
+
 const char* tr(const char* en)
 {
+#ifdef __3DS__
+    if (en && *en) en = forThe3ds(en);
+#endif
     if (s_current <= 0 || !en || !*en) return en;
     const LangMo& mo = g_lang_mo[s_current - 1];
     const unsigned char* d = mo.data;
