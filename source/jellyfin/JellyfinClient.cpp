@@ -603,6 +603,17 @@ int JellyfinClient::httpRequest(const std::string& url,
     int port;
     bool isHttps;
     if (!parseUrl(url, host, port, basePath, isHttps)) return -1;
+#ifdef WIIFIN_HTTP_TIMING
+    const u64 t0 = ticks_to_millisecs(gettime());
+    const int st = request(isHttps, host, port, basePath, method, contentType, body,
+                   authToken, responseBody, maxResponse);
+    std::string pth = basePath.substr(0, basePath.find('?'));
+    for (size_t i = 0; i < pth.size(); ++i)   /* ids shortened */
+        if (i + 32 <= pth.size() && pth.find_first_not_of("0123456789abcdef", i) >= i + 32) pth.replace(i, 32, "#");
+    SYS_Report("[T] %4u ms %3d %6u B %s %s\n", (unsigned)(ticks_to_millisecs(gettime()) - t0), st,
+               (unsigned)responseBody.size(), method.c_str(), pth.c_str());
+    return st;
+#endif
     return request(isHttps, host, port, basePath, method, contentType, body,
                    authToken, responseBody, maxResponse);
 }
@@ -645,9 +656,10 @@ struct TlsShared {
     mbedtls_ctr_drbg_context drbg;
     bool                     caLoaded   = false;
     mbedtls_x509_crt         ca;
-    bool                     confReady  = false;
-    bool                     confVerify = false;
-    mbedtls_ssl_config       conf;
+    /* one per mode (verified or not), kept: a connection open with one
+     * stays valid when the setting changes */
+    bool                     confReady[2] = { false, false };
+    mbedtls_ssl_config       conf[2];
 };
 
 struct Conn {
@@ -662,7 +674,19 @@ struct Conn {
 };
 
 TlsShared s_tls;
-Conn      s_conn;
+
+/* The connections: one on the Wii.  On the 3DS the posters' loaders have
+ * their own (JellyfinClient::setThreadConnection), so a page's list isn't
+ * waiting behind them, nor they behind it. */
+#ifdef __3DS__
+const int CONN_SLOTS = 3;
+__thread int t_slot = 0;
+#else
+const int CONN_SLOTS = 1;
+const int t_slot = 0;
+#endif
+Conn s_conns[CONN_SLOTS];
+#define s_conn (s_conns[t_slot])
 
 /* Reconnect instead of reusing a connection idle for longer than this:
  * servers drop idle keep-alive connections (nginx 75 s, Kestrel 130 s). */
@@ -683,17 +707,34 @@ void closeConn() {
 
 /* One request at a time on s_conn: during playback the trickplay loader and
  * MPlayer's "stream opened" report run beside the main thread.  Recursive:
- * a request may recover the network, which closes the connection. */
-mutex_t s_connLock = LWP_MUTEX_NULL;
+ * a request may recover the network, which closes the connection.
+ * s_sharedLock: what the connections share (the DNS, the TLS set-up, its
+ * random generator). */
+mutex_t s_connLock[CONN_SLOTS];
+mutex_t s_sharedLock = LWP_MUTEX_NULL;
+bool    s_locksMade = false;
 
 void connLockInit() {
-    if (s_connLock == LWP_MUTEX_NULL) LWP_MutexInit(&s_connLock, true);
+    if (s_locksMade) return;
+    for (int i = 0; i < CONN_SLOTS; ++i) LWP_MutexInit(&s_connLock[i], true);
+    LWP_MutexInit(&s_sharedLock, true);
+    s_locksMade = true;
 }
 
 struct ConnGuard {
-    ConnGuard()  { connLockInit(); LWP_MutexLock(s_connLock); }
-    ~ConnGuard() { LWP_MutexUnlock(s_connLock); }
+    ConnGuard()  { connLockInit(); LWP_MutexLock(s_connLock[t_slot]); }
+    ~ConnGuard() { LWP_MutexUnlock(s_connLock[t_slot]); }
 };
+
+struct SharedGuard {
+    SharedGuard()  { connLockInit(); LWP_MutexLock(s_sharedLock); }
+    ~SharedGuard() { LWP_MutexUnlock(s_sharedLock); }
+};
+
+int lockedRandom(void* drbg, unsigned char* out, size_t len) {
+    SharedGuard g;
+    return mbedtls_ctr_drbg_random(drbg, out, len);
+}
 
 bool loadCa(std::string& err) {
     if (s_tls.caLoaded) return true;
@@ -710,6 +751,7 @@ bool loadCa(std::string& err) {
 }
 
 bool tlsSharedInit(bool verify, std::string& err) {
+    SharedGuard g;
     if (!s_tls.seeded) {
         mbedtls_entropy_init(&s_tls.entropy);
         mbedtls_ctr_drbg_init(&s_tls.drbg);
@@ -724,36 +766,32 @@ bool tlsSharedInit(bool verify, std::string& err) {
         s_tls.seeded = true;
     }
     if (verify && !loadCa(err)) return false;
-    if (!s_tls.confReady || s_tls.confVerify != verify) {
-        if (s_tls.confReady) {
-            if (s_conn.tls) closeConn();   /* the SSL context references the old config */
-            mbedtls_ssl_config_free(&s_tls.conf);
-            s_tls.confReady = false;
-        }
-        mbedtls_ssl_config_init(&s_tls.conf);
-        if (mbedtls_ssl_config_defaults(&s_tls.conf, MBEDTLS_SSL_IS_CLIENT,
+    if (!s_tls.confReady[verify]) {
+        mbedtls_ssl_config& conf = s_tls.conf[verify];
+        mbedtls_ssl_config_init(&conf);
+        if (mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
                                         MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
-            mbedtls_ssl_config_free(&s_tls.conf);
+            mbedtls_ssl_config_free(&conf);
             err = N_("TLS: ssl_config_defaults failed");
             return false;
         }
         if (verify) {
-            mbedtls_ssl_conf_ca_chain(&s_tls.conf, &s_tls.ca, nullptr);
-            mbedtls_ssl_conf_authmode(&s_tls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
-            mbedtls_ssl_conf_verify(&s_tls.conf, wii_cert_verify, nullptr);
+            mbedtls_ssl_conf_ca_chain(&conf, &s_tls.ca, nullptr);
+            mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+            mbedtls_ssl_conf_verify(&conf, wii_cert_verify, nullptr);
         } else {
-            mbedtls_ssl_conf_authmode(&s_tls.conf, MBEDTLS_SSL_VERIFY_NONE);
+            mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE);
         }
-        mbedtls_ssl_conf_rng(&s_tls.conf, mbedtls_ctr_drbg_random, &s_tls.drbg);
-        s_tls.confReady  = true;
-        s_tls.confVerify = verify;
+        mbedtls_ssl_conf_rng(&conf, lockedRandom, &s_tls.drbg);
+        s_tls.confReady[verify] = true;
     }
     return true;
 }
 
 /* Resolve host (IPv4 literal or DNS) into addr. */
 bool resolve(const std::string& host, int port, struct sockaddr_in& addr, std::string& err) {
+    SharedGuard g;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(port);
@@ -806,7 +844,7 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
     if (tls) {
         u64 t0 = nowMs();
         mbedtls_ssl_init(&s_conn.ssl);
-        int ret = mbedtls_ssl_setup(&s_conn.ssl, &s_tls.conf);
+        int ret = mbedtls_ssl_setup(&s_conn.ssl, &s_tls.conf[verify]);
         if (ret == 0) {
             mbedtls_ssl_set_hostname(&s_conn.ssl, host.c_str());
             mbedtls_ssl_set_bio(&s_conn.ssl, &s_conn.sock, wii_tls_send, wii_tls_recv, nullptr);
@@ -1030,6 +1068,15 @@ mbedtls_x509_crt* wiifin_ca_chain() {
     return loadCa(err) ? &s_tls.ca : nullptr;
 }
 
+void JellyfinClient::setThreadConnection(int slot) {
+    connLockInit();
+#ifdef __3DS__
+    t_slot = slot >= 0 && slot < CONN_SLOTS ? slot : 0;
+#else
+    (void)slot;
+#endif
+}
+
 void JellyfinClient::dropConnection() {
     ConnGuard g;
     closeConn();
@@ -1062,13 +1109,14 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
     Log::addPrivate(host);   /* never write the server's name to the log */
     /* failures go to the log (path only: queries may hold search terms) */
     auto fail = [&](const std::string& why) {
-        errMsg = why;
+        if (t_slot == 0) errMsg = why;   /* the posters' loaders: no one reads it */
         SYS_Report("[HTTP] %s %s %s -> %s\n", method.c_str(), tls ? "https" : "http",
                    path.substr(0, path.find('?')).c_str(), why.c_str());
         return -1;
     };
     /* the network starting again (after a loss): not now */
     if (netBusy) return fail(N_("Network lost: reconnecting..."));
+    if (t_slot != 0 && !networkReady) return fail(N_("Network lost: reconnecting..."));
     if (!networkReady && takeNetworkResult() == false && netThread == 0 && netRestart == false) {
         /* the last restart failed: another, in the background */
         recoverNetwork();
@@ -1115,7 +1163,7 @@ int JellyfinClient::request(bool tls, const std::string& host, int port,
             bool transient = false;
             if (!openConn(tls, addr, host, port, sslVerify, err, transient)) {
                 if ((s_lastSocketErr == -ENETRESET || s_lastSocketErr == -ENETDOWN ||
-                     s_lastSocketErr == -ENXIO) && !recovered) {
+                     s_lastSocketErr == -ENXIO) && !recovered && t_slot == 0) {
                     SYS_Report("[Net] network lost (%d), restarting it\n", (int)s_lastSocketErr);
                     recovered = true;
                     if (recoverNetwork()) continue;

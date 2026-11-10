@@ -194,6 +194,10 @@ public:
     // be closed behind our back (MPlayer closes all of them after a video
     // session), so a stale socket number is never reused.
     void dropConnection();
+    /* the connection this thread's requests use: 0 (the default) is the
+     * one the interface's requests share; on the 3DS, 1 and 2 are the
+     * posters' loaders' (a single connection on the Wii) */
+    static void setThreadConnection(int slot);
 
     // Authenticate with username + password
     // Returns true on success, fills out auth

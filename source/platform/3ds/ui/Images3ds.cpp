@@ -2,6 +2,7 @@
 #include "../../../ui/JpegTexture.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <map>
 #include <vector>
 #include <unistd.h>
@@ -29,7 +30,10 @@ JellyfinAuth    s_auth;
 std::string     s_server;
 std::map<std::string, Entry> s_map;
 mutex_t  s_lock = LWP_MUTEX_NULL;
-lwp_t    s_thread = LWP_THREAD_NULL;
+/* two loaders, each with its own connection to the server (beside the one
+ * the pages' lists use) */
+const int LOADERS = 2;
+lwp_t    s_thread[LOADERS] = { LWP_THREAD_NULL, LWP_THREAD_NULL };
 volatile bool s_quit = false;
 unsigned s_frame = 0, s_ask = 0;
 
@@ -40,8 +44,9 @@ std::string key(const std::string& id, Kind k)
     return id + (k == Kind::Poster ? "/p" : k == Kind::Thumb ? "/t" : "/b");
 }
 
-void* worker(void*)
+void* worker(void* slot)
 {
+    JellyfinClient::setThreadConnection((int)(intptr_t)slot);
     while (!s_quit) {
         /* the newest asked, still wanted (asked lately) */
         std::string k;
@@ -71,7 +76,13 @@ void* worker(void*)
             ok = s_client->getItemImageBytes(s_server, s_auth, item.id, 240, 136, bytes);
         else
             ok = s_client->getItemImageBytes(s_server, s_auth, item.id, 128, 192, bytes);
+#ifdef WIIFIN_HTTP_TIMING
+        const u64 td = ticks_to_millisecs(gettime());
+#endif
         GRRLIB_texImg* tex = ok && !bytes.empty() ? loadJPEGTexture((const u8*)bytes.data(), (u32)bytes.size()) : nullptr;
+#ifdef WIIFIN_HTTP_TIMING
+        SYS_Report("[T] decode %u ms (%u B)\n", (unsigned)(ticks_to_millisecs(gettime()) - td), (unsigned)bytes.size());
+#endif
 
         LWP_MutexLock(s_lock);
         auto it = s_map.find(k);
@@ -96,16 +107,19 @@ void start(JellyfinClient& client, const JellyfinAuth& auth, const std::string& 
     s_server = serverUrl;
     if (s_lock == LWP_MUTEX_NULL) LWP_MutexInit(&s_lock, false);
     s_quit = false;
-    LWP_CreateThread(&s_thread, worker, nullptr, nullptr, 64 * 1024, 40);
+    JellyfinClient::setThreadConnection(0);   /* (makes the locks, before the loaders) */
+    for (int i = 0; i < LOADERS; ++i)
+        LWP_CreateThread(&s_thread[i], worker, (void*)(intptr_t)(i + 1), nullptr, 64 * 1024, 40);
 }
 
 void stop()
 {
-    if (s_thread != LWP_THREAD_NULL) {
-        s_quit = true;
-        LWP_JoinThread(s_thread, nullptr);
-        s_thread = LWP_THREAD_NULL;
-    }
+    s_quit = true;
+    for (int i = 0; i < LOADERS; ++i)
+        if (s_thread[i] != LWP_THREAD_NULL) {
+            LWP_JoinThread(s_thread[i], nullptr);
+            s_thread[i] = LWP_THREAD_NULL;
+        }
     if (s_lock == LWP_MUTEX_NULL) return;
     LWP_MutexLock(s_lock);
     for (auto& e : s_map) if (e.second.tex) GRRLIB_FreeTexture(e.second.tex);

@@ -34,6 +34,7 @@ private:
         std::string title;
         std::vector<JellyfinItem> items;
         bool libraries = false;          /* My Media: wide tiles */
+        bool latest = false;             /* a library's "Latest in" */
         Ui3ds::Scroller hs;
         int sel = 0;
     };
@@ -44,6 +45,8 @@ private:
         JellyfinItem item;               /* the library, series, album, film... */
         bool loading = true;
         std::shared_ptr<Job> job;
+        std::shared_ptr<Job> job2;       /* Home: its "Latest in" rows, after the others */
+        int gen = 0;                     /* loads of the page (a late one's result dropped) */
         /* Home */
         std::vector<Row> rows;
         int row = 0;

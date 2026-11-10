@@ -134,10 +134,11 @@ void Browse3ds::push(std::unique_ptr<Page> p)
 void Browse3ds::pop()
 {
     if (stack.size() <= 1) return;
-    if (stack.back()->job && stack.back()->job->running()) {
-        stack.back()->job->apply = nullptr;
-        s_orphans->push_back(stack.back()->job);
-    }
+    for (std::shared_ptr<Job>* j : { &stack.back()->job, &stack.back()->job2 })
+        if (*j && (*j)->running()) {
+            (*j)->apply = nullptr;
+            s_orphans->push_back(*j);
+        }
     stack.pop_back();
     SoundFX::play(SoundFX::FX::Back);
 }
@@ -159,7 +160,11 @@ void Browse3ds::load(Page& p)
     const std::string url = serverUrl;
     switch (p.type) {
     case Type::Home: {
+        /* the page as soon as its first rows are there; the libraries'
+         * latest ones (a request each) come after */
         auto rows = std::make_shared<std::vector<Row>>();
+        auto libs = std::make_shared<std::vector<JellyfinLibrary>>();
+        const int gen = ++p.gen;
         p.job = runJob([=]() {
             Row cw; cw.title = tr("Continue Watching");
             cl->getContinueWatching(url, au, cw.items);
@@ -167,35 +172,58 @@ void Browse3ds::load(Page& p)
             Row nu; nu.title = tr("Next Up");
             cl->getNextUp(url, au, nu.items);
             if (!nu.items.empty()) rows->push_back(std::move(nu));
-            std::vector<JellyfinLibrary> libs;
-            cl->getLibraries(url, au, libs);
+            cl->getLibraries(url, au, *libs);
             Row media; media.title = tr("My Media"); media.libraries = true;
-            for (const JellyfinLibrary& l : libs) {
+            for (const JellyfinLibrary& l : *libs) {
                 JellyfinItem it;
                 it.id = l.id; it.name = l.name; it.type = "CollectionFolder"; it.extraType = l.collectionType;
                 media.items.push_back(it);
             }
             if (!media.items.empty()) rows->push_back(std::move(media));
-            for (const JellyfinLibrary& l : libs) {
-                if (l.collectionType != "movies" && l.collectionType != "tvshows" && l.collectionType != "music") continue;
-                Row r;
-                char title[160];
-                /* TRANSLATORS: a row of the home page; %s is the name of a library */
-                snprintf(title, sizeof(title), tr("Latest in %s"), l.name.c_str());
-                r.title = title;
-                char q[256];
-                snprintf(q, sizeof(q), "/Users/%s/Items/Latest?ParentId=%s&Limit=16", au.userId.c_str(), l.id.c_str());
-                cl->getItemsByQuery(url, au, q, r.items);
-                if (!r.items.empty()) rows->push_back(std::move(r));
-            }
         }, [=]() {
+            if (gen != pp->gen) return;
+            /* the row selected before a reload stays selected */
             const std::string keep = pp->row < (int)pp->rows.size() ? pp->rows[pp->row].title : "";
+            std::vector<Row> latest;   /* a reload: the "Latest in" rows kept until new ones come */
+            for (Row& r : pp->rows) if (r.latest) latest.push_back(std::move(r));
             pp->rows = std::move(*rows);
+            for (Row& r : latest) pp->rows.push_back(std::move(r));
             for (int i = 0; i < (int)pp->rows.size(); ++i)
                 if (pp->rows[i].title == keep) pp->row = i;
             if (pp->row >= (int)pp->rows.size()) pp->row = 0;
             for (Row& r : pp->rows) r.hs.horizontal = true;
             pp->loading = false;
+
+            auto more = std::make_shared<std::vector<Row>>();
+            if (pp->job2 && pp->job2->running()) {   /* an earlier load's: dropped */
+                pp->job2->apply = nullptr;
+                s_orphans->push_back(pp->job2);
+            }
+            pp->job2 = runJob([=]() {
+                for (const JellyfinLibrary& l : *libs) {
+                    if (l.collectionType != "movies" && l.collectionType != "tvshows" && l.collectionType != "music") continue;
+                    Row r;
+                    char title[160];
+                    /* TRANSLATORS: a row of the home page; %s is the name of a library */
+                    snprintf(title, sizeof(title), tr("Latest in %s"), l.name.c_str());
+                    r.title = title;
+                    r.latest = true;
+                    char q[256];
+                    snprintf(q, sizeof(q), "/Users/%s/Items/Latest?ParentId=%s&Limit=16", au.userId.c_str(), l.id.c_str());
+                    cl->getItemsByQuery(url, au, q, r.items);
+                    if (!r.items.empty()) more->push_back(std::move(r));
+                }
+            }, [=]() {
+                if (gen != pp->gen) return;
+                const std::string keep = pp->row < (int)pp->rows.size() ? pp->rows[pp->row].title : "";
+                std::vector<Row> kept;
+                for (Row& r : pp->rows) if (!r.latest) kept.push_back(std::move(r));
+                for (Row& r : *more) { r.hs.horizontal = true; kept.push_back(std::move(r)); }
+                pp->rows = std::move(kept);
+                for (int i = 0; i < (int)pp->rows.size(); ++i)
+                    if (pp->rows[i].title == keep) pp->row = i;
+                if (pp->row >= (int)pp->rows.size()) pp->row = 0;
+            });
         });
         break;
     }
@@ -860,7 +888,7 @@ bool Browse3ds::frame(ir_t& ir)
     ++frames;
     readTouch(ir, touch);
     dragAxis(touch);
-    for (auto& p : stack) if (p->job) p->job->poll();
+    for (auto& p : stack) { if (p->job) p->job->poll(); if (p->job2) p->job2->poll(); }
     if (detailJob) detailJob->poll();
     for (size_t i = 0; i < s_orphans->size();) {
         if ((*s_orphans)[i]->done) { (*s_orphans)[i]->poll(); s_orphans->erase(s_orphans->begin() + i); }
