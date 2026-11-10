@@ -42,9 +42,12 @@ float s_left  = 0.0f;   /* drawing x of frame pixel 0         */
 float s_scale = 1.0f;   /* frame pixels per drawing unit (x)  */
 float s_scaleY = 1.0f;  /* frame pixels per drawing unit (y): 0.5 on the 3DS */
 
+/* glyphs are rasterised for a size at a frame mapping: both in the key
+ * (the 3DS draws its own screens 1:1 and the Wii's at half size) */
 FaceSize& faceSize(GRRLIB_ttfFont* font, unsigned size)
 {
-    return s_cache[std::make_pair(font->face, size)];
+    const unsigned map = ((unsigned)(s_scale * 64.0f + 0.5f) << 24) | ((unsigned)(s_scaleY * 64.0f + 0.5f) << 16);
+    return s_cache[std::make_pair(font->face, size | map)];
 }
 
 void setSize(FT_Face face, unsigned size)
@@ -343,10 +346,14 @@ void Text::clearCache()
     s_cache.clear();
 }
 
+void Text::frameMapping(float& left, float& scale, float& scaleY)
+{
+    left = s_left; scale = s_scale; scaleY = s_scaleY;
+}
+
 void Text::setFrameMapping(float left, float scale, float scaleY)
 {
     if (left == s_left && scale == s_scale && scaleY == s_scaleY) return;
-    clearCache();             /* glyphs were rasterised for the old size */
     s_left  = left;
     s_scale = scale > 0.0f ? scale : 1.0f;
     s_scaleY = scaleY > 0.0f ? scaleY : 1.0f;

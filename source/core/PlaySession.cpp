@@ -142,7 +142,7 @@ static std::string episodeTitle(const JellyfinEpisode& ep) {
 bool runPlaySession(JellyfinClient& client,
                     const JellyfinAuth& auth,
                     const std::string& serverUrl,
-                    LibraryView& lv,
+                    PlayRequest& lv,
                     GRRLIB_ttfFont* font,
                     GRRLIB_texImg* btnTex,
                     GRRLIB_texImg* cursorTex,

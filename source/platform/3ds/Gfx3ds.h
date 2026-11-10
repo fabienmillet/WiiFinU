@@ -47,6 +47,10 @@ void defaultTop();
 /* While true, the bottom screen's backlight is off (watching a video) */
 void setBottomOff(bool off);
 
+/* Before a system applet (the keyboard): the frame being drawn ends (the
+ * next one begins at the next drawing) */
+void endFrameForApplet();
+
 /* Frames shown so far (each GRRLIB_Render) */
 unsigned frames();
 

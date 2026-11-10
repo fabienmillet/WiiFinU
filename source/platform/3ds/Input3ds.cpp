@@ -106,6 +106,16 @@ s32 WPAD_ScanPads(void)
     return 0;
 }
 
+/* The touch for the 3DS's own screens (Ui3ds): where (frame pixels),
+ * whether it touches, a tap this scan, a drag under way */
+int Input3ds_touch(float* x, float* y, int* tap, int* dragged)
+{
+    *x = s_x; *y = s_y;
+    *tap = s_tap ? 1 : 0;
+    *dragged = s_dragged ? 1 : 0;
+    return s_touching ? 1 : 0;
+}
+
 u32 WPAD_ButtonsDown(int chan) { return chan == 0 && s_tap ? WPAD_BUTTON_A : 0; }
 u32 WPAD_ButtonsHeld(int chan) { (void)chan; return 0; }
 u32 WPAD_ButtonsUp(int chan) { (void)chan; return 0; }

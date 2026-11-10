@@ -15,6 +15,9 @@
 #include "../ui/ProfileView.h"
 #include "../ui/SettingsView.h"
 #include "../ui/LibraryView.h"
+#ifdef __3DS__
+#include "../platform/3ds/ui/Browse3ds.h"
+#endif
 #include "../jellyfin/JellyfinClient.h"
 #include "../jellyfin/RemoteControl.h"
 
@@ -532,6 +535,54 @@ void App::loop() {
                        (host.rfind('.') == std::string::npos ? "(none)" : host.substr(host.rfind('.') + 1).c_str()));
         }
         if (!waitForNetwork()) return; /* DNS won't work without this */
+#ifdef __3DS__
+        {   /* the 3DS: its own screens (two screens, touch) */
+            Browse3ds bv(jellyfinClient, auth, p.serverUrl, p.username);
+            jellyfinClient.postCapabilities(p.serverUrl, auth);
+            Remote::start(p.serverUrl, auth.accessToken, jellyfinClient.sslVerify);
+            struct RemoteOff { ~RemoteOff() { Remote::stop(); } } remoteOff;
+            for (;;) {
+                while (true) {
+                    Input::update();
+                    Input::readIR(ir);
+                    if (g_app_powerOff || g_app_reset) { running = false; break; }
+                    if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
+                    if (bv.frame(ir)) break;
+                    GRRLIB_Render();
+                }
+                if (!running) return;
+                if (bv.pendingPlayIsMusic) {
+                    bv.pendingPlayIsMusic = false;
+                    SoundFX::play(SoundFX::FX::Play);
+                    MusicPlayerView mpv(font, jellyfinClient, auth, p.serverUrl);
+                    mpv.setCursorTex(cursorPointerTex);
+                    mpv.setTracks(bv.pendingMusicTracks, bv.pendingMusicTrackIdx);
+                    mpv.setShuffleStart(bv.pendingMusicShuffle);
+                    bv.pendingMusicShuffle = false;
+                    bool wantsExit = mpv.run();
+                    if (g_app_powerOff || g_app_reset) { running = false; return; }
+                    SoundFX::play(SoundFX::FX::Back);
+                    if (wantsExit) { running = false; return; }
+                    bv.onPlaybackFinished();
+                } else if (!bv.pendingPlayUrl.empty()) {
+                    std::string lastItemId;
+                    bool wantsExit = runPlaySession(jellyfinClient, auth, p.serverUrl, bv,
+                                                    font, btnTex, cursorPointerTex, ringTex, lastItemId);
+                    if (wantsExit || g_app_powerOff || g_app_reset) { running = false; return; }
+                    saveSettings();
+                    bv.onPlaybackFinished();
+                } else if (bv.exitTo == Browse3ds::Exit::Settings) {
+                    bv.exitTo = Browse3ds::Exit::None;
+                    runSettings(&p);
+                    if (!running) return;
+                } else {
+                    MusicSession::stop(true);
+                    SYS_Report("[WiiFin] back to the profiles\n");
+                    return;
+                }
+            }
+        }
+#endif
         LibraryView lv(font, jpFont, cursorPointerTex, ringTex,
                        jellyfinClient, auth, p.serverUrl);
         lv.setUserName(p.username);

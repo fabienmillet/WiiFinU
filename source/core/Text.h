@@ -45,4 +45,5 @@ namespace Text {
      * narrower and placed on whole frame pixels, so they stay sharp instead
      * of being shrunk by the GPU.  Clears the cache when it changes. */
     void setFrameMapping(float left, float scale, float scaleY = 1.0f);
+    void frameMapping(float& left, float& scale, float& scaleY);
 }

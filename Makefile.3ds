@@ -21,12 +21,14 @@ TOOLS       := $(DEVKITPRO)/tools/bin
 
 TARGET      := WiiFin
 BUILD       := build3ds
-APP_TITLE   := WiiFin
+APP_TITLE   = $(APP_NAME)
 APP_DESC    := Jellyfin client
 APP_AUTHOR  := Fabien MILLET
 
 P3DS        := source/platform/3ds
-SOURCES     := source source/core source/input source/ui source/jellyfin source/player $(P3DS)
+SOURCES     := source source/core source/input source/ui source/jellyfin source/player $(P3DS) $(P3DS)/ui
+# the 3DS version's name (still to be chosen)
+APP_NAME    ?= 3DSFin
 
 # The Wii's own pieces, done by $(P3DS) on the 3DS
 WII_ONLY    := source/core/LwpJoinFix.cpp source/core/Reload.cpp \
@@ -73,7 +75,7 @@ INCLUDE     := -I$(CURDIR)/$(P3DS)/compat \
 
 WERROR      ?=
 CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP -mword-relocations -ffunction-sections \
-               $(ARCH) -D__3DS__ $(INCLUDE)
+               $(ARCH) -D__3DS__ -DAPP_NAME='"$(APP_NAME)"' $(INCLUDE)
 CXXFLAGS    := $(CFLAGS) -fno-rtti -std=gnu++17
 LDFLAGS     := -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(TARGET).3ds.map -Wl,--gc-sections \
                -Wl,--wrap=SYS_Report -Wl,--wrap=GRRLIB_Render

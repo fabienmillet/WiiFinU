@@ -478,6 +478,14 @@ GRRLIB_texImg* wrap(Tex3ds* t)
 }
 
 void setTopDrawer(void (*draw)()) { s_topDrawer = draw; }
+
+void endFrameForApplet()
+{
+    if (!s_inFrame) return;
+    flushBatch();
+    C3D_FrameEnd(0);
+    s_inFrame = false;
+}
 void setBottomOff(bool off) { s_bottomOff = off; }
 unsigned frames() { return s_frames; }
 

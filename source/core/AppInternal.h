@@ -1,4 +1,5 @@
 #pragma once
+#include "PlayRequest.h"
 /* Shared between App.cpp, PlaySession.cpp and HomeMenu.cpp. */
 #include <grrlib.h>
 #include <wiiuse/wpad.h>
@@ -27,7 +28,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
 bool runPlaySession(JellyfinClient& client,
                     const JellyfinAuth& auth,
                     const std::string& serverUrl,
-                    LibraryView& lv,
+                    PlayRequest& lv,
                     GRRLIB_ttfFont* font,
                     GRRLIB_texImg* btnTex,
                     GRRLIB_texImg* cursorTex,
