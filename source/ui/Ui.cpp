@@ -362,7 +362,13 @@ void initScreen(bool widescreen)
     guOrtho(m, 0.0f, 480.0f, -s_off, 640.0f + s_off, 0.0f, 1000.0f);
     GX_LoadProjectionMtx(m, GX_ORTHOGRAPHIC);
     /* glyphs rasterised at frame resolution (see Text::setFrameMapping) */
+#ifdef __3DS__
+    /* the 3DS: the frame is drawn at half size on its screens (both of
+     * them: the top one's 800x480 space too), glyphs rasterised for that */
+    Text::setFrameMapping(-s_off, 0.5f * 640.0f / (640.0f + 2.0f * s_off), 0.5f);
+#else
     Text::setFrameMapping(-s_off, 640.0f / (640.0f + 2.0f * s_off));
+#endif
 }
 
 float screenLeft()  { return -s_off; }

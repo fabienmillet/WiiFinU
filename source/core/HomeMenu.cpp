@@ -40,6 +40,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
      * console's own HOME button is the system's menu */
     const int NB = 1;
     float bcx[2] = { 320.0f, 320.0f };
+    (void)B0X; (void)B1X;
 #else
     const int NB = 2;
     float bcx[2] = { B0X + BTN_W * 0.5f, B1X + BTN_W * 0.5f };

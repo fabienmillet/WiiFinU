@@ -44,5 +44,5 @@ namespace Text {
      * 640-pixel frame (scale 0.75); glyphs are then rasterised that much
      * narrower and placed on whole frame pixels, so they stay sharp instead
      * of being shrunk by the GPU.  Clears the cache when it changes. */
-    void setFrameMapping(float left, float scale);
+    void setFrameMapping(float left, float scale, float scaleY = 1.0f);
 }

@@ -112,7 +112,9 @@ void App::loadSettings() {
         } else if (strcmp(key, "solid_colors") == 0) {
             Ui::setSolidColors(atoi(val) != 0);
         } else if (strcmp(key, "direct_play") == 0) {
+#ifndef __3DS__   /* the 3DS: always converted to its size */
             jellyfinClient.directPlay = atoi(val) != 0;
+#endif
         } else if (strcmp(key, "device_id") == 0) {
             JellyfinClient::setDeviceId(val);   /* tests: several Dolphins, one id each */
         } else if (strcmp(key, "screen_area_asked") == 0) {

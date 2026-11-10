@@ -58,9 +58,10 @@ void SettingsView::openSection(int s) {
     if (s == 0) rows = profile ? std::vector<int>{ R_THEME, R_BACKGROUNDS, R_HOME, R_VIEW }
                                : std::vector<int>{ R_THEME, R_BACKGROUNDS };
 #ifdef __3DS__
-    /* the 3DS: no TV to fit, no disc slot, its own screens' refresh */
+    /* the 3DS: no TV to fit, no disc slot, its own screens' refresh; every
+     * video converted to its size (files as they are are too heavy) */
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
-                              R_SSL, R_QUALITY, R_DIRECT };
+                              R_SSL, R_QUALITY };
 #else
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
                               R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };

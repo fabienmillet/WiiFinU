@@ -40,6 +40,7 @@ std::vector<GRRLIB_ttfFont*> s_fallbacks;
 
 float s_left  = 0.0f;   /* drawing x of frame pixel 0         */
 float s_scale = 1.0f;   /* frame pixels per drawing unit (x)  */
+float s_scaleY = 1.0f;  /* frame pixels per drawing unit (y): 0.5 on the 3DS */
 
 FaceSize& faceSize(GRRLIB_ttfFont* font, unsigned size)
 {
@@ -50,7 +51,8 @@ void setSize(FT_Face face, unsigned size)
 {
     /* narrower pixels when the frame is squeezed (16:9), see setFrameMapping */
     FT_UInt w = (FT_UInt)(size * s_scale + 0.5f);
-    if (FT_Set_Pixel_Sizes(face, w ? w : 1, size) != 0)
+    FT_UInt h = (FT_UInt)(size * s_scaleY + 0.5f);
+    if (FT_Set_Pixel_Sizes(face, w ? w : 1, h ? h : 1) != 0)
         FT_Set_Pixel_Sizes(face, 0, 12);   /* same fallback as GRRLIB */
 }
 
@@ -268,8 +270,10 @@ void Text::print(int x, int y, GRRLIB_ttfFont* font, const char* utf8,
             f32 framePen = (x + penX - s_left) * s_scale;
             f32 frameX0  = floorf(framePen + 0.5f) + g.left - 1;
             f32 x0 = s_left + frameX0 / s_scale;
-            f32 y0 = (f32)(y + penY - g.top - 1);
-            f32 x1 = x0 + g.w / s_scale, y1 = y0 + g.h;
+            /* the same vertically: on the baseline's frame line */
+            f32 frameBase = floorf((y + penY) * s_scaleY + 0.5f);
+            f32 y0 = (frameBase - g.top - 1) / s_scaleY;
+            f32 x1 = x0 + g.w / s_scale, y1 = y0 + g.h / s_scaleY;
             GX_LoadTexObj(const_cast<GXTexObj*>(&g.tex), GX_TEXMAP0);
             GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
                 GX_Position3f32(x0, y0, 0.0f); GX_Color1u32(color); GX_TexCoord2f32(0.0f, 0.0f);
@@ -339,10 +343,11 @@ void Text::clearCache()
     s_cache.clear();
 }
 
-void Text::setFrameMapping(float left, float scale)
+void Text::setFrameMapping(float left, float scale, float scaleY)
 {
-    if (left == s_left && scale == s_scale) return;
-    clearCache();             /* glyphs were rasterised for the old width */
+    if (left == s_left && scale == s_scale && scaleY == s_scaleY) return;
+    clearCache();             /* glyphs were rasterised for the old size */
     s_left  = left;
     s_scale = scale > 0.0f ? scale : 1.0f;
+    s_scaleY = scaleY > 0.0f ? scaleY : 1.0f;
 }
