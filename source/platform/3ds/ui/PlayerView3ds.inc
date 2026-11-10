@@ -33,7 +33,8 @@ void PlayerView::render(const ir_t& ir)
     const float dur = duration();
     const float pos = seekPending ? seekPendingTo : displayPosition();
     const float bx = BAR_X * H, by = BAR_Y * H, bw = BAR_W * H;
-    Ui::roundRect(bx, by, bw, 6, 3, p.field);
+    /* the track: the theme's field colour is too close to the background */
+    Ui::roundRect(bx, by, bw, 6, 3, Ui::alpha(p.text, 0.25f));
     if (dur > 0) {
         const float f = pos / dur < 0 ? 0 : pos / dur > 1 ? 1 : pos / dur;
         Ui::roundRect(bx, by, bw * f, 6, 3, p.accent);
