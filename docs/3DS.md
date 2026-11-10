@@ -33,7 +33,16 @@ Closing the lid pauses a video too.
 
 ## Video
 
-Jellyfin converts every video for the 3DS: MPEG-4 at **400x240** at most (the top screen) and MP3 stereo, 350 kb/s to 1.2 Mb/s depending on *Settings > Video Quality* (Normal: 550 kb/s). Films are never played as they are (*Direct Play* is not offered): the 3DS could not decode them.
+As on the Wii, a file the console can decode plays as it is (*Settings > Direct Play*, Auto by default), and Jellyfin converts the others: MPEG-4 at **400x240** at most (the top screen) and MP3 stereo, 350 kb/s to 1.2 Mb/s depending on *Settings > Video Quality* (Normal: 550 kb/s).
+
+| Direct play | 3DS / 2DS | New 3DS / New 2DS |
+|---|---|---|
+| MPEG-4 ASP (DivX, Xvid) | ≤ 400x240, ≤ 1 Mb/s | ≤ 640x480, ≤ 1.5 Mb/s |
+| H.264 (8-bit) | ≤ 400x240, level ≤ 3.0, ≤ 0.8 Mb/s | ≤ 640x360, level ≤ 3.1, ≤ 1.2 Mb/s |
+| Containers | AVI, MKV/WebM, MP4/M4V/MOV, TS | same |
+| Audio | MP3, MP2, AAC; 2 channels at most | same |
+
+Always 30 fps at most, no subtitles chosen (they are burned in by a conversion), and the whole file under 2.5 Mb/s and the link measured before playing. A file that turns out too heavy (frames dropped over 10 s) goes on converted. These limits are cautious, measured in Azahar only (New 3DS: an Xvid 640x360 at 1 Mb/s takes 30% of a core, an H.264 one 40%): to widen with real consoles. Not decoded at all: HEVC, VP8/VP9, AV1, MPEG-1/2, AC3, DTS, Vorbis, FLAC.
 
 The video is decoded by the CPU (FFmpeg); the colour conversion is done by the 3DS's own hardware (Y2R) straight into the GPU's texture. On a New 3DS, WiiFin uses its faster clock and a core of its own for the video.
 

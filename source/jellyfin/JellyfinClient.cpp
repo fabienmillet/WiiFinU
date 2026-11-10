@@ -1,4 +1,8 @@
 #include "JellyfinClient.h"
+#include <memory>
+#ifdef __3DS__
+#include "Platform3ds.h"
+#endif
 #include <algorithm>
 #include "../core/ExitZone.h"
 #include "../core/Lang.h"
@@ -829,6 +833,12 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
     s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
     s_lastSocketErr = sock < 0 ? sock : 0;
     if (sock < 0) { err = "socket() failed (" + std::to_string(sock) + ")"; return false; }
+#ifdef __3DS__
+    {   /* a bigger receive window: the 3DS's default is small */
+        int rcv = 256 * 1024;
+        net_setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv, sizeof(rcv));
+    }
+#endif
 
     /* 8 s: a home server answers in milliseconds; past that it is down or
      * the address is wrong, and the user should hear about it */
@@ -988,9 +998,17 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
     bool complete   = false;
     keepAlive = true;
 
-    unsigned char buf[4096];
+#ifdef __3DS__
+    /* bigger reads: each one is a call to the system's sockets */
+    const size_t READ = 16384;
+    std::unique_ptr<unsigned char[]> bufMem(new unsigned char[READ]);
+    unsigned char* buf = bufMem.get();
+#else
+    const size_t READ = 4096;
+    unsigned char buf[READ];
+#endif
     while (!complete) {
-        int ret = connRead(buf, sizeof(buf));
+        int ret = connRead(buf, READ);
         if (ret <= 0) {
             /* Connection ended (close_notify, EOF, error or timeout) */
             keepAlive = false;
@@ -2575,6 +2593,42 @@ struct DirectFormat {
     const char* video;
     const char* audio;
 };
+#ifdef __3DS__
+/* The 3DS: FFmpeg in software on its 268 MHz CPU (804 MHz on the New 3DS),
+ * the picture fitted to the 400x240 top screen.  Its FFmpeg has the H.264,
+ * MPEG-4 ASP, AAC, MP3 and MP2 decoders only; everything goes through
+ * FFmpeg's demuxers (so an audio track is its rank, whatever the file). */
+const DirectFormat FORMATS[] = {
+    { "avi",            "lavf:avi",      "mpeg4,h264", "mp3,mp2,aac" },
+    { "mkv,webm",       "lavf:matroska", "mpeg4,h264", "mp3,mp2,aac" },
+    { "mp4,m4v,mov",    "lavf:mov",      "mpeg4,h264", "aac,mp3" },
+    { "ts,mpegts,m2ts", "lavf:mpegts",   "h264,mpeg4", "mp2,mp3,aac" },
+};
+struct VideoLimit {
+    const char* codecs;
+    int width, height;
+    int level;      /* 0: none */
+    int bitrate;    /* 0: none */
+};
+/* cautious, to widen with measurements on consoles: past them, and when a
+ * file turns out too heavy (frames dropped), it is converted */
+VideoLimit VIDEO_LIMITS[] = {
+    { "mpeg4", 400, 240, 0,  1000000 },
+    { "h264",  400, 240, 30,  800000 },
+};
+void fitLimitsToConsole() {
+    static bool done = false;
+    if (done) return;
+    done = true;
+    if (!Platform3ds::isNew3DS()) return;
+    VIDEO_LIMITS[0] = { "mpeg4", 640, 480, 0,  1500000 };
+    VIDEO_LIMITS[1] = { "h264",  640, 360, 31, 1200000 };
+}
+const int MAX_FPS = 30;
+int maxChannels(const std::string&, const struct DirectFormat*) { return 2; }
+/* its Wi-Fi (802.11g) */
+const int MAX_DIRECT_BPS = 2500000;
+#else
 const DirectFormat FORMATS[] = {
     { "avi",            "avi",    "mpeg4,h264,mpeg1video,mpeg2video",     "mp3,mp2,ac3,aac" },
     { "mkv,webm",       "mkv",    "mpeg4,h264,mpeg1video,mpeg2video,vp8", "mp3,mp2,ac3,aac,vorbis,flac" },
@@ -2596,6 +2650,9 @@ const VideoLimit VIDEO_LIMITS[] = {
     { "vp8",                         640, 480, 0,  0 },
 };
 const int MAX_FPS = 30;
+void fitLimitsToConsole() {}
+const int MAX_DIRECT_BPS = 8000000;
+
 /* audio channels: AC3 5.1 is mixed down cheaply, the others are stereo.
  * Not in AVI: FFmpeg-made ones describe 5.1 audio with a WAVEFORMATEXTENSIBLE
  * header that MPlayer CE's AVI demuxer misreads (the AC3 went to the PCM
@@ -2603,6 +2660,7 @@ const int MAX_FPS = 30;
 int maxChannels(const std::string& codec, const DirectFormat* f) {
     return codec == "ac3" && !(f && strcmp(f->demuxer, "avi") == 0) ? 6 : 2;
 }
+#endif
 
 /* name is one of the comma-separated list */
 bool inList(const char* list, const std::string& name) {
@@ -2637,6 +2695,7 @@ std::string condition(const char* prop, int value, bool required) {
 
 /* "DirectPlayProfiles", "CodecProfiles"... of the device profile */
 std::string directProfile() {
+    fitLimitsToConsole();
     std::string s = "\"DirectPlayProfiles\":[";
     for (size_t i = 0; i < sizeof(FORMATS) / sizeof(FORMATS[0]); ++i)
         s += std::string(i ? "," : "") + "{\"Type\":\"Video\",\"Container\":\"" + FORMATS[i].containers +
@@ -2690,7 +2749,7 @@ bool JellyfinClient::getDirectPlayUrl(const std::string& serverUrl,
     /* what the link carries, with a margin; the Wii's Wi-Fi and its CPU
      * give out above 8 Mb/s anyway */
     int maxBps = linkKbps > 0 ? (int)(linkKbps * 1000LL * 3 / 4) : 4000000;
-    if (maxBps > 8000000) maxBps = 8000000;
+    if (maxBps > MAX_DIRECT_BPS) maxBps = MAX_DIRECT_BPS;
 
     char url[512];
     snprintf(url, sizeof(url), "%s/Items/%s/PlaybackInfo?UserId=%s&DeviceId=%s",

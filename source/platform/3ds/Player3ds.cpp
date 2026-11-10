@@ -554,7 +554,8 @@ int avRead(void*, uint8_t* buf, int size)
 
 int64_t avSeek(void*, int64_t off, int whence)
 {
-    if (whence == AVSEEK_SIZE) return s_http && s_http->total > 0 ? s_http->total : -1;
+    if (whence & AVSEEK_SIZE) return s_http && s_http->total > 0 ? s_http->total : -1;
+    whence &= ~AVSEEK_FORCE;   /* FFmpeg may add it: the same seek */
     if (!s_http || s_http->total <= 0) return -1;
     long long target = whence == SEEK_SET ? off : whence == SEEK_CUR ? s_ring.base + (long long)s_ring.rd + off
                      : s_http->total + off;
@@ -940,8 +941,15 @@ void playMain(void*)
         if (avformat_find_stream_info(fmt, nullptr) < 0) SYS_Report("[Player3ds] no stream info\n");
     }
     if (s_mode == Mode::Video) vIdx = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    aIdx = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, g_wiifin_aid >= 0 && s_mode == Mode::Video ? -1 : -1,
-                               vIdx >= 0 ? vIdx : -1, nullptr, 0);
+    aIdx = -1;
+    if (g_wiifin_direct && g_wiifin_aid >= 0 && s_mode == Mode::Video) {
+        /* a file's chosen track: its rank among the audio ones */
+        int n = 0;
+        for (unsigned i = 0; i < fmt->nb_streams && aIdx < 0; ++i)
+            if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && n++ == g_wiifin_aid) aIdx = (int)i;
+    }
+    if (aIdx < 0)
+        aIdx = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, vIdx >= 0 ? vIdx : -1, nullptr, 0);
     if (vIdx < 0 && aIdx < 0) { SYS_Report("[Player3ds] no audio nor video\n"); goto out; }
     if (fmt->duration > 0) g_mplayer_duration = (float)(fmt->duration / (double)AV_TIME_BASE);
 

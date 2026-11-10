@@ -541,11 +541,7 @@ public:
                           int audioStreamIndex,
                           int subtitleStreamIndex,
                           DirectPlay& out);
-#ifdef __3DS__
-    bool directPlay = false;  // the 3DS: films as they are are too heavy; Auto in the settings
-#else
     bool directPlay = true;   // the "Direct play" setting (Auto / Off)
-#endif
 
     // How a video is played: the file as it is, or a transcode.
     struct PlaybackChoice {

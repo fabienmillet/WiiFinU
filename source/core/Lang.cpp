@@ -93,6 +93,8 @@ static const char* forThe3ds(const char* en)
           "The video comes in, but the console can't show it: the picture stays stuck." },
         { "The Wii's language, as set in the Wii Settings",
           "The console's language, as set in its System Settings" },
+        { "Files the Wii can decode play as they are (SD DivX, DVD...): no server work",
+          "Small files the console can decode play as they are: no server work" },
         { "Too heavy for the Wii: transcoding...",
           "Too heavy for the console: transcoding..." },
         { "Check the Wii's Internet settings, then try again.",

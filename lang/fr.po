@@ -2116,6 +2116,9 @@ msgstr "La vidéo arrive, mais la console ne peut pas l'afficher : l'image reste
 msgid "This is taking long: the console's network may need a restart."
 msgstr "C'est long : le réseau de la console a peut-être besoin d'être relancé."
 
+msgid "Small files the console can decode play as they are: no server work"
+msgstr "Les petits fichiers que la console sait lire sont lus tels quels : serveur au repos"
+
 msgid "Too heavy for the console: transcoding..."
 msgstr "Trop lourd pour la console : conversion..."
 

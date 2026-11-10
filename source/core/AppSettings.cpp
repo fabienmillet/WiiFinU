@@ -13,6 +13,13 @@
 #include <string.h>
 #include <unistd.h>
 
+/* the 3DS's own key: its first builds always converted, and saved 0 */
+#ifdef __3DS__
+#define DIRECT_PLAY_KEY "direct_play_3ds"
+#else
+#define DIRECT_PLAY_KEY "direct_play"
+#endif
+
 /* wiifin.cfg is never left half-written (#46): saveSettings writes
  * wiifin.cfg.tmp, keeps the previous file as wiifin.cfg.bak, then renames
  * the new one into place.  loadSettings reads the first of the three that
@@ -111,10 +118,8 @@ void App::loadSettings() {
             Ui::setClock12h(atoi(val) != 0);
         } else if (strcmp(key, "solid_colors") == 0) {
             Ui::setSolidColors(atoi(val) != 0);
-        } else if (strcmp(key, "direct_play") == 0) {
-#ifndef __3DS__   /* the 3DS: always converted to its size */
+        } else if (strcmp(key, DIRECT_PLAY_KEY) == 0) {
             jellyfinClient.directPlay = atoi(val) != 0;
-#endif
         } else if (strcmp(key, "device_id") == 0) {
             JellyfinClient::setDeviceId(val);   /* tests: several Dolphins, one id each */
         } else if (strcmp(key, "screen_area_asked") == 0) {
@@ -239,7 +244,7 @@ void App::saveSettings() {
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
-    fprintf(f, "direct_play=%d\n",      jellyfinClient.directPlay ? 1 : 0);
+    fprintf(f, DIRECT_PLAY_KEY "=%d\n",  jellyfinClient.directPlay ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */
     fprintf(f, "ui_theme=%d\n",         startView.theme);
     fprintf(f, "home_layout=%d\n",      startView.homeLayout);
