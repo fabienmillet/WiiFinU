@@ -183,7 +183,14 @@ void SYS_ResetSystem(s32 reset, u32 type, s32 force)
     exit(0);
 }
 
-u32 SYS_GetArena1Size(void) { return (u32)osGetMemRegionFree(MEMREGION_APPLICATION); }
+/* (the logs' memory figures) the heap's free bytes, the linear heap's */
+extern u32 __ctru_heap, __ctru_heap_size;
+u32 SYS_GetArena1Size(void)
+{
+    struct mallinfo mi = mallinfo();
+    const u32 top = (u32)(uintptr_t)sbrk(0);
+    return (u32)mi.fordblks + (__ctru_heap + __ctru_heap_size - top);
+}
 u32 SYS_GetArena2Size(void) { return (u32)linearSpaceFree(); }
 
 /* ---- settings ------------------------------------------------------------ */

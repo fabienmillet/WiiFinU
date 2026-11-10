@@ -770,6 +770,9 @@ void yuvToRgb565(const AVFrame* f, u16* out, int w, int h)
 /* the picture into a texture the screen isn't using, then shown */
 unsigned s_shown = 0;   /* pictures shown (wiifin_video_frames) */
 unsigned s_skipped = 0; /* decoded too late, not shown */
+/* CPU time (system ticks) decoding, for the log: how much of the CPU
+ * playback takes */
+u64 s_vTicks = 0, s_aTicks = 0;
 
 /* The 3DS's YUV-to-RGB hardware (Y2R) writes the picture straight into
  * the texture, in the GPU's 8x8 tiles: no work for the CPU, which the
@@ -1045,6 +1048,8 @@ void playMain(void*)
                 }
                 ++reads;
                 if (pkt->stream_index == aIdx && adec) {
+                    const u64 t0 = svcGetSystemTick();
+                    struct AT { u64 t0; ~AT() { s_aTicks += svcGetSystemTick() - t0; } } at{ t0 };
                     if (avcodec_send_packet(adec, pkt) >= 0) {
                         while (avcodec_receive_frame(adec, frame) >= 0) {
                             double pts = frame->best_effort_timestamp != AV_NOPTS_VALUE
@@ -1083,6 +1088,7 @@ void playMain(void*)
             }
 
             /* the next picture */
+            const u64 vt0 = svcGetSystemTick();
             while (!havePic && !vq.empty()) {
                 AVPacket* q = vq.front();
                 vq.pop_front();
@@ -1095,6 +1101,7 @@ void playMain(void*)
                     picPts = pic->best_effort_timestamp != AV_NOPTS_VALUE ? pic->best_effort_timestamp * av_q2d(vtb) : 0;
                 }
             }
+            s_vTicks += svcGetSystemTick() - vt0;
             if (!havePic) {
                 if (eof) {
                     /* the end: what sound is queued, heard */
@@ -1143,11 +1150,17 @@ void playMain(void*)
                 static u64 lastLog = 0;
                 const u64 t = gettime();
                 if (t - lastLog > 5000000ULL) {
-                    lastLog = t;
+                    static u64 lastTick = 0;
+                    const u64 now = svcGetSystemTick();
+                    const double span = lastTick ? (double)(now - lastTick) : 0;
                     SYS_Report("[Player3ds] at %.1f s, audio %.2f s (%d queued), cache %.0f KB, "
-                               "%u pictures, %u late, %u waiting\n",
+                               "%u pictures, %u late, %u waiting, CPU video %.0f%% audio %.0f%%\n",
                                picPts, audioClock(), s_audioOn ? audioQueued() : 0,
-                               ringFill() / 1024.0, s_shown, s_skipped, (unsigned)vq.size());
+                               ringFill() / 1024.0, s_shown, s_skipped, (unsigned)vq.size(),
+                               span > 0 ? 100.0 * s_vTicks / span : 0.0, span > 0 ? 100.0 * s_aTicks / span : 0.0);
+                    lastLog = t;
+                    lastTick = now;
+                    s_vTicks = s_aTicks = 0;
                 }
             }
         }
@@ -1219,8 +1232,12 @@ bool startThread(const char* url, Mode mode)
     APT_CheckNew3DS(&n3ds);
     if (n3ds) core = 2;
     s_playThread = threadCreate(playMain, nullptr, 256 * 1024, prio < 0x3F ? prio + 1 : prio, core, false);
-    if (!s_playThread && core != -2)
+    if (!s_playThread && core != -2) {
+        core = -2;
         s_playThread = threadCreate(playMain, nullptr, 256 * 1024, prio < 0x3F ? prio + 1 : prio, -2, false);
+    }
+    SYS_Report("[Player3ds] %s, decoding on %s\n", n3ds ? "New 3DS" : "3DS",
+               core == 2 ? "core 2" : "the application's core");
     if (!s_playThread) { s_running = 0; return false; }
     return true;
 }

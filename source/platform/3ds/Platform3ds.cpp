@@ -13,11 +13,13 @@
 #include "../../player/WiiPlayer.h"
 
 #include <3ds.h>
+#include <ogc/lwp_watchdog.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
 
 extern unsigned char data_logo_wiifin_png[];
+extern "C" u64 g_3ds_lastInputMs;   /* Input3ds */
 
 namespace {
 
@@ -37,8 +39,22 @@ void quad(float x, float y, float w, float h, u32 top, u32 bottom)
     GX_End();
 }
 
+/* During a video, the bottom screen's light goes off after a while
+ * untouched (the battery), back on at any button or touch */
+void bottomLight()
+{
+    const u64 now = osGetTime();
+    static u64 s_videoSince = 0;
+    const bool video = Player3ds::videoActive() && !g_mplayer_paused;
+    if (!video) s_videoSince = 0;
+    else if (!s_videoSince) s_videoSince = now;
+    const u64 idle = g_3ds_lastInputMs ? ticks_to_millisecs(gettime()) - g_3ds_lastInputMs : ~0ULL;
+    Gfx3ds::setBottomOff(video && now - s_videoSince > 8000 && idle > 8000);
+}
+
 void drawTop()
 {
+    bottomLight();
     if (Player3ds::drawTop()) return;
     const Ui::Palette& p = Ui::pal();
     quad(0, 0, 800, 480, p.bgTop, p.bgBottom);

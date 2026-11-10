@@ -50,11 +50,20 @@ extern "C" {
 
 s32 WPAD_Init(void) { return 0; }
 
+/* when a button or the touch screen was last used (Platform3ds: the
+ * bottom screen's light during a video) */
+u64 g_3ds_lastInputMs = 0;
+
 s32 WPAD_ScanPads(void)
 {
     hidScanInput();
     s_held = hidKeysHeld();
     s_down = hidKeysDown();
+    {
+        circlePosition c;
+        hidCircleRead(&c);
+        if (s_held || c.dx * c.dx + c.dy * c.dy > 40 * 40) g_3ds_lastInputMs = ticks_to_millisecs(gettime());
+    }
     hidCircleRead(&s_cpad);
     s_tap = false;
     const u64 now = ticks_to_millisecs(gettime());
