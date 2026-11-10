@@ -499,7 +499,11 @@ static void dpadGlyph(float cx, float cy, bool vertical, u32 c)
 }
 
 /* Width of the glyph drawn for a hint button (0 = label only). */
+#ifdef __3DS__
+static ButtonStyle s_buttonStyle = ButtonStyle::GameCube;   /* the 3DS's names from the start */
+#else
 static ButtonStyle s_buttonStyle = ButtonStyle::WiiRemote;
+#endif
 #ifdef __3DS__
 /* the 3DS's buttons are named as a GameCube controller's (Y, X, L, R, START) */
 void        setButtonStyle(ButtonStyle s) { (void)s; s_buttonStyle = ButtonStyle::GameCube; }
