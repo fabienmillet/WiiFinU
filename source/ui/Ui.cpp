@@ -677,6 +677,7 @@ void setNowPlaying(const std::string& line)
     snprintf(s_nowPlaying[w], sizeof(s_nowPlaying[w]), "%s", line.c_str());
     s_nowPlayingAt = w;
 }
+const char* nowPlaying() { return s_nowPlaying[s_nowPlayingAt]; }
 
 /* a quaver: what plays, in the footers */
 static void noteGlyph(float x, float y, u32 c)

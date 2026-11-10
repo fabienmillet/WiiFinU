@@ -122,6 +122,7 @@ void showNotice(const std::string& header, const std::string& text, int ms);
 /* the music that goes on while browsing: the footers say what plays ("":
  * nothing); any thread */
 void setNowPlaying(const std::string& line);
+const char* nowPlaying();   /* "" when nothing plays */
 void drawNotice();
 
 /* Bottom bar with the clock in the middle and button hints on the sides.

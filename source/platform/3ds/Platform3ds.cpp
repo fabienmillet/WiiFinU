@@ -60,7 +60,22 @@ void drawTop()
     else
         snprintf(clock, sizeof(clock), "%02d:%02d", lt.tm_hour, lt.tm_min);
     Ui::textCentered(400, 290, clock, 64, p.text);
-    if (!s_caption.empty()) Ui::textCentered(400, 400, s_caption.c_str(), 28, p.textDim);
+    /* the music playing (the menus' footers say it too) */
+    const char* playing = Ui::nowPlaying();
+    const std::string line = playing && *playing ? playing : s_caption;
+    if (!line.empty()) {
+        /* too long: cut, whole UTF-8 characters, with an ellipsis */
+        std::string l = line;
+        if (Ui::textWidth(l.c_str(), 28) > 740) {
+            while (l.size() > 1 && Ui::textWidth((l + "\xE2\x80\xA6").c_str(), 28) > 740) {
+                size_t cut = l.size() - 1;
+                while (cut > 0 && (l[cut] & 0xC0) == 0x80) --cut;
+                l.erase(cut);
+            }
+            l += "\xE2\x80\xA6";
+        }
+        Ui::textCentered(400, 400, l.c_str(), 28, p.textDim);
+    }
 }
 
 aptHookCookie s_hook;
