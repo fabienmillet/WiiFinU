@@ -117,7 +117,7 @@ GRRLIB_texImg* Trickplay::thumbnail(float secs, bool show)
 
 void Trickplay::freeAll(std::vector<GRRLIB_texImg*>& v)
 {
-    for (GRRLIB_texImg* t : v) { free(t->data); free(t); }
+    for (GRRLIB_texImg* t : v) GRRLIB_FreeTexture(t);
     v.clear();
 }
 
