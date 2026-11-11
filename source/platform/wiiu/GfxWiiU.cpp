@@ -41,6 +41,8 @@
 #include <gx2/texture.h>
 #include <gx2/utils.h>
 #include <proc_ui/procui.h>
+#include <coreinit/title.h>
+#include <sysapp/launch.h>
 #include <whb/gfx.h>
 #include <whb/proc.h>
 
@@ -534,9 +536,27 @@ void exit()
     if (!s_up) return;
     s_up = false;
     if (!s_exiting) {
-        /* leaving by ourselves: back to where we were started from (the
-         * HOME menu's own exit has already been asked) */
-        WHBProcStopRunning();
+        /* leaving by ourselves (closed from the HOME menu: already done).
+         * From the Homebrew Launcher: back to it (WHBProcShutdown); else
+         * the Wii U Menu is asked for, and the system's messages followed
+         * until it closes us (a few seconds at most: an emulator may not) */
+        const uint64_t tid = OSGetTitleID();
+        const bool fromHbl = tid == 0x0005000013374842ULL || (tid & 0xFFFFFFFFFFFFF0FFULL) == 0x000500101004A000ULL;
+        if (fromHbl) WHBProcStopRunning();
+        else {
+            SYSLaunchMenu();
+            for (int i = 0; i < 240 && WHBProcIsRunning(); ++i) {
+                if (!ProcUIInForeground()) continue;
+                WHBGfxBeginRender();
+                WHBGfxBeginRenderTV();
+                WHBGfxClearColor(0, 0, 0, 1);
+                WHBGfxFinishRenderTV();
+                WHBGfxBeginRenderDRC();
+                WHBGfxClearColor(0, 0, 0, 1);
+                WHBGfxFinishRenderDRC();
+                WHBGfxFinishRender();
+            }
+        }
     }
     WHBGfxFreeShaderGroup(&s_texShader);
     WHBGfxFreeShaderGroup(&s_nv12Shader[0]);
