@@ -42,6 +42,11 @@ void inject(uint16_t padBits);
 uint16_t buttonOf(const char* wiiName);
 void setRemotePointer(bool valid, float frameX, float frameY);
 
+/* The last raw states read (VPADStatus, KPADStatus; nullptr none): the
+ * system's keyboard reads them */
+const void* rawVpad();
+const void* rawKpad(int chan);
+
 /* Something was pressed or touched lately (ms, gettime's) */
 uint64_t lastInputMs();
 /* The GamePad's L3 + R3 pressed together this scan: the screens' mode */

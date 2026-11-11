@@ -24,6 +24,8 @@ public:
     /* Top-left corner of the keys and the action key's label. */
     void setOrigin(float x, float y)    { x0 = x; y0 = y; }
     void setEnterLabel(const char* s)   { enterLabel = s; }
+    /* the text typed is hidden (the system's keyboard, on the Wii U) */
+    void setPassword(bool on)           { password = on; }
     void reset();
 
     /* Edits text (at most maxLen bytes). */
@@ -41,6 +43,7 @@ private:
 
     float       x0 = 67, y0 = 140;
     const char* enterLabel = "OK";
+    bool        password = false;
     int   page  = 0;          /* 0 letters, 1 symbols         */
     int   shift = 0;          /* 0 off, 1 next letter, 2 lock */
     int   selRow = 1, selCol = 0;

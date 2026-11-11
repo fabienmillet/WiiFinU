@@ -16,6 +16,7 @@
 #include "InputWiiU.h"
 #include "PlayerWiiU.h"
 #include "AudioWiiU.h"
+#include "SwkbdWiiU.h"
 #include "../../ui/Ui.h"
 #include "../../core/Lang.h"
 #include "../../core/Text.h"
@@ -176,6 +177,7 @@ void act(Ctl c)
 /* the touch, once a scan */
 void handleTouch()
 {
+    if (SwkbdWiiU::shown()) { s_held = C_NONE; return; }
     const uint32_t scan = InputWiiU::scans();
     if (scan == s_lastScan) return;
     s_lastScan = scan;

@@ -474,6 +474,7 @@ void ConnectView::handleVKBInput(ir_t& ir) {
     if (fi > 2) { kbActive = false; return; }
     kb.setOrigin((640 - kb.width()) * 0.5f, 238);
     kb.setEnterLabel(fi < 2 ? N_("Next") : N_("Done"));
+    kb.setPassword(fi == 2);
     switch (kb.update(ir, fields[fi], 255)) {
     case Keyboard::Result::Enter:
         /* OK walks through the fields, then lands on Connect */

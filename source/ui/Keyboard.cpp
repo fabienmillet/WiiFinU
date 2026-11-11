@@ -1,3 +1,6 @@
+#ifdef __WIIU__
+#include "../platform/wiiu/SwkbdWiiU.h"
+#endif
 #include "Keyboard.h"
 #include "Ui.h"
 #include "../input/Input.h"
@@ -103,6 +106,15 @@ Keyboard::Result Keyboard::press(const Key& k, std::string& text, size_t maxLen)
 
 Keyboard::Result Keyboard::update(const ir_t& ir, std::string& text, size_t maxLen)
 {
+#ifdef __WIIU__
+    /* the Wii U: its own keyboard (on the GamePad), WiiFin's if it can't */
+    switch (SwkbdWiiU::edit(text, tr(enterLabel), password, maxLen)) {
+        case SwkbdWiiU::Result::Busy:   return Result::None;
+        case SwkbdWiiU::Result::Ok:     return Result::Enter;
+        case SwkbdWiiU::Result::Cancel: return Result::Cancel;
+        case SwkbdWiiU::Result::Unavailable: break;
+    }
+#endif
     /* Pointer: the highlight follows it */
     int pr, pc;
     bool overKey = keyUnder(ir, pr, pc);

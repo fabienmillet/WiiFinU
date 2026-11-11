@@ -4,6 +4,7 @@
  * ----------------------------------------------------------------------- */
 #include "InputWiiU.h"
 #include "GfxWiiU.h"
+#include "SwkbdWiiU.h"
 
 #include <vpad/input.h>
 #include <padscore/kpad.h>
@@ -42,6 +43,10 @@ bool     s_touching = false, s_tap = false, s_dragged = false;
 float    s_tx = 0, s_ty = 0, s_startX = 0, s_startY = 0;
 uint64_t s_touchStart = 0;
 bool     s_kpadUp = false;
+VPADStatus s_rawVpad;
+bool       s_rawVpadOk = false;
+KPADStatus s_rawKpad[4];
+bool       s_rawKpadOk[4] = {};
 
 uint64_t nowMs() { return (uint64_t)OSTicksToMilliseconds(OSGetSystemTime()); }
 
@@ -127,7 +132,11 @@ void scan()
     memset(&vs, 0, sizeof(vs));
     static VPADStatus s_lastVs;
     static bool s_haveVs = false;
-    if (VPADRead(VPAD_CHAN_0, &vs, 1, &ve) > 0 && ve == VPAD_READ_SUCCESS) { s_lastVs = vs; s_haveVs = true; }
+    s_rawVpadOk = false;
+    if (VPADRead(VPAD_CHAN_0, &vs, 1, &ve) > 0 && ve == VPAD_READ_SUCCESS) {
+        s_lastVs = vs; s_haveVs = true;
+        s_rawVpad = vs; s_rawVpadOk = true;
+    }
     else if (s_haveVs && ve == VPAD_READ_NO_SAMPLES) vs = s_lastVs;   /* nothing new: as it was */
     else s_haveVs = false;
     if (s_haveVs) {
@@ -166,7 +175,10 @@ void scan()
         KPADStatus ks;
         KPADError ke = KPAD_ERROR_OK;
         memset(&ks, 0, sizeof(ks));
+        s_rawKpadOk[c] = false;
         if (KPADReadEx((KPADChan)c, &ks, 1, &ke) <= 0 || ke != KPAD_ERROR_OK) continue;
+        s_rawKpad[c] = ks;
+        s_rawKpadOk[c] = true;
         if (ks.extensionType == WPAD_EXT_PRO_CONTROLLER) {
             pad |= fromClassic(ks.pro.hold);
             if (fabsf(ks.pro.leftStick.x) > fabsf(lx)) lx = ks.pro.leftStick.x;
@@ -213,6 +225,12 @@ void scan()
     if (inject) s_lastInputMs = now;
     GfxWiiU::hideCursor(fromTouch);
 
+    if (SwkbdWiiU::shown()) {
+        /* the system's keyboard has the controls */
+        core = 0; pad = 0; inject = 0; lx = ly = 0;
+        ptrValid = false;
+        s_tap = false;
+    }
     /* an injected press is held for this scan only (Input.cpp sees it
      * pressed, then released) */
     s_st.core = core;
@@ -225,6 +243,8 @@ void scan()
 }
 
 uint32_t scans() { return s_scans; }
+const void* rawVpad() { return s_rawVpadOk ? &s_rawVpad : nullptr; }
+const void* rawKpad(int c) { return c >= 0 && c < 4 && s_rawKpadOk[c] ? &s_rawKpad[c] : nullptr; }
 
 const State& state() { return s_st; }
 

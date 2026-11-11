@@ -22,6 +22,7 @@
 #include <ogc/system.h>
 #include "shaders/texture_gsh.h"
 #include "shaders/nv12_gsh.h"
+#include "SwkbdWiiU.h"
 
 #include <coreinit/cache.h>
 #include <coreinit/memdefaultheap.h>
@@ -961,6 +962,7 @@ void GRRLIB_Render(void)
     }
     recordRemote();
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, s_vbuf, s_vcount * sizeof(Vtx));
+    SwkbdWiiU::calc();
 
     WHBGfxBeginRender();
     {
@@ -969,6 +971,7 @@ void GRRLIB_Render(void)
         WHBGfxClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         setCommonState();
         drawList(s_main, (int)tv->surface.width, (int)tv->surface.height);
+        SwkbdWiiU::drawTV();
         WHBGfxFinishRenderTV();
     }
     {
@@ -978,6 +981,7 @@ void GRRLIB_Render(void)
         setCommonState();
         drawList(s_mode == GfxWiiU::Mode::Remote ? s_remote : s_main,
                  (int)drc->surface.width, (int)drc->surface.height);
+        SwkbdWiiU::drawDRC();
         WHBGfxFinishRenderDRC();
     }
     WHBGfxFinishRender();
