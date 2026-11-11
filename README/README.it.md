@@ -1,6 +1,5 @@
 <p align="center">
-  <img src="../source/platform/wiiu/meta/icon.png" alt="WiiFin U" width="64"/><br>
-  <strong><big>WiiFin U</big></strong><br>
+  <img src="../data/images/logo_wiifinu.png" alt="WiiFin U" width="480"/><br>
   <em>Client Jellyfin per Nintendo Wii U</em>
 </p>
 

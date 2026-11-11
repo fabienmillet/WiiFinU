@@ -18,6 +18,7 @@
 #include "AudioWiiU.h"
 #include "SwkbdWiiU.h"
 #include "../../ui/Ui.h"
+#include "ui/UiWiiU.h"
 #include "../../core/Lang.h"
 #include "../../core/Text.h"
 #include "../../player/WiiPlayer.h"
@@ -366,8 +367,8 @@ void drawRemote()
     GRRLIB_Rectangle(0, 0, 854, 480, p.bgBottom, true);
     Ui::roundRect(-20, -20, 894, 520, 0, p.bgTop, p.bgBottom);
     /* the header: the app, what it is, the clock */
-    Ui::text(24, 18, "WiiFin", 24, p.accent);
-    Ui::text(24 + Ui::textWidth("WiiFin", 24) + 12, 25, tr("Remote control"), 16, p.textDim);
+    const float lw = UiWiiU::logo(20, 34, 34);
+    Ui::text(20 + lw + 12, 25, tr("Remote control"), 16, p.textDim);
     {
         time_t now = time(nullptr);
         struct tm lt;

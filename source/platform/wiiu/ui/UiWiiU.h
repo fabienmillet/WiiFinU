@@ -79,8 +79,9 @@ inline bool hit(const Touch& t, float x, float y, float w, float h)
 void progress(float x, float y, float w, float frac, float h = 4);
 /* a small spinner (loading) */
 void spinner(float cx, float cy, float r);
-/* the WiiFin logo (its picture), height h, centred vertically on cy */
-void logo(float x, float cy, float h);
+/* the WiiFin U logo (its picture), height h, centred vertically on cy;
+ * returns its width (0: none) */
+float logo(float x, float cy, float h);
 /* hints at the bottom: "A Open"... (a button's Wii name, its label) */
 struct Hint { const char* button; const char* label; };
 void hints(float x, float y, const Hint* h, int n, int size, u32 color, bool rightAlign = false);

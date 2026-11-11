@@ -142,7 +142,7 @@ bool showErrorScreen(const char* title, const std::string& line1,
 #if defined(__3DS__) || defined(__WIIU__)
         Ui::textRight(546, 258, APP_NAME " v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
 #else
-        Ui::textRight(546, 258, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
+        Ui::textRight(546, 258, WIIFIN_CLIENT_NAME " v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
 #endif
         if (retry) {
             const Ui::Hint l[] = { { "A", N_("Retry") } };

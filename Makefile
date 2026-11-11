@@ -124,7 +124,8 @@ $(eval $(call EMBED,cursor_pointer_png,data/cursors/PointerP1-64.png,data_cursor
 $(eval $(call EMBED,cursor_hand_open_png,data/cursors/HandOpenP1-64.png,data_cursors_HandOpenP1_64_png))
 $(eval $(call EMBED,cursor_hand_closed_png,data/cursors/HandClosedP1-64.png,data_cursors_HandClosedP1_64_png))
 $(eval $(call EMBED,button_start_png,data/images/button_start.png,data_button_start_png))
-$(eval $(call EMBED,logo_wiifin_png,data/images/logo_wiifin.png,data_logo_wiifin_png))
+# WiiFin U's logo (WiiFin's, with its U) under WiiFin's name: the screens draw it as they are
+$(eval $(call EMBED,logo_wiifin_png,data/images/logo_wiifinu.png,data_logo_wiifin_png))
 $(eval $(call EMBED,wii_font_ttf,data/fonts/wii_font.ttf,data_wii_font_ttf))
 $(eval $(call EMBED,jp_font_ttf,data/fonts/jp_font.ttf,data_jp_font_ttf))
 $(eval $(call EMBED,ring_png,data/images/ring.png,data_ring_png))

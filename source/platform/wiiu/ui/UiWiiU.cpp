@@ -386,13 +386,14 @@ void spinner(float cx, float cy, float r)
     }
 }
 
-void logo(float x, float cy, float h)
+float logo(float x, float cy, float h)
 {
     static GRRLIB_texImg* s_logo = nullptr;
     if (!s_logo) s_logo = GRRLIB_LoadTexture(data_logo_wiifin_png);
-    if (!s_logo || !s_logo->h) return;
+    if (!s_logo || !s_logo->h) return 0;
     const float w = h * s_logo->w / s_logo->h;
     Ui::texRound(s_logo, x, cy - h * 0.5f, w, h, 0, 0, 0, 1, 1, 0xFFFFFFFF);
+    return w;
 }
 
 void hints(float x, float y, const Hint* hs, int n, int size, u32 color, bool rightAlign)
