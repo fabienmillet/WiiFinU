@@ -690,8 +690,9 @@ TlsShared s_tls;
 const int CONN_SLOTS = 3;
 __thread int t_slot = 0;
 #elif defined(__WIIU__)
-/* no thread-local variables on the Wii U (wut): coreinit's thread values */
-const int CONN_SLOTS = 3;
+/* no thread-local variables on the Wii U (wut): coreinit's thread values;
+ * the pages' requests and four posters' loaders */
+const int CONN_SLOTS = 5;
 struct ThreadSlot {
     operator int() const { return (int)(uintptr_t)OSGetThreadSpecific(OS_THREAD_SPECIFIC_0); }
     ThreadSlot& operator=(int v) { OSSetThreadSpecific(OS_THREAD_SPECIFIC_0, (void*)(uintptr_t)v); return *this; }
@@ -996,10 +997,12 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
 
     /* The response goes to a static buffer: no heap for the usual small
      * ones.  A request allowing more (maxResponse) moves on to the heap
-     * once it is full, doubling the room up to that size. */
-    static char rawBuf[256 * 1024] DEAD_AT_EXIT;
+     * once it is full, doubling the room up to that size.  One buffer a
+     * connection: the posters' loaders read theirs at the same time. */
+    static char rawBufs[CONN_SLOTS][256 * 1024] DEAD_AT_EXIT;
+    char*  rawBuf = rawBufs[t_slot];
     char*  raw  = rawBuf;
-    size_t cap  = sizeof(rawBuf);
+    size_t cap  = sizeof(rawBufs[0]);
     char*  heap = nullptr;
     struct Free { char*& p; ~Free() { free(p); } } freeHeap{heap};
     int  rawLen     = 0;
@@ -1536,6 +1539,14 @@ bool JellyfinClient::getAlbumsByArtist(const std::string& serverUrl,
 // ---------------------------------------------------------------------------
 // Fetch raw bytes for an item's primary image (JPEG)
 // ---------------------------------------------------------------------------
+/* Pictures: the Wii U fetches them at its TV's size (a 1080p backdrop is
+ * over the 256 KB a response is otherwise cut at) */
+#ifdef __WIIU__
+static const size_t IMAGE_MAX = 4 * 1024 * 1024;
+#else
+static const size_t IMAGE_MAX = 0;
+#endif
+
 bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
                                         const JellyfinAuth& auth,
                                         const std::string& itemId,
@@ -1548,7 +1559,7 @@ bool JellyfinClient::getItemImageBytes(const std::string& serverUrl,
         "/Items/%s/Images/Primary?fillWidth=%d&fillHeight=%d&maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
         itemId.c_str(), maxWidth, maxHeight, maxWidth, maxHeight);
     std::string url = serverUrl + qs;
-    int status = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
+    int status = httpRequest(url, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX);
     return status == 200;
 }
 
@@ -1558,7 +1569,7 @@ bool JellyfinClient::getPhotoBytes(const std::string& serverUrl, const JellyfinA
     char qs[192];
     snprintf(qs, sizeof(qs), "/Items/%s/Images/Primary?maxWidth=%d&maxHeight=%d&quality=85&format=Jpg",
              itemId.c_str(), maxWidth, maxHeight);
-    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes) == 200;
+    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX) == 200;
 }
 
 // ---------------------------------------------------------------------------
@@ -1578,20 +1589,20 @@ bool JellyfinClient::getItemBackdropBytes(const std::string& serverUrl,
     if (item.type == "Episode") {
         // Episode still (Thumb)
         std::string url = serverUrl + "/Items/" + item.id + "/Images/Thumb" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
+        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX);
         if (st == 200 && !outBytes.empty()) return true;
         outBytes.clear();
         // Series backdrop
         if (!item.seriesId.empty()) {
             url = serverUrl + "/Items/" + item.seriesId + "/Images/Backdrop/0" + sizeqs;
-            st  = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
+            st  = httpRequest(url, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX);
             if (st == 200 && !outBytes.empty()) return true;
             outBytes.clear();
         }
     } else {
         // Movie / Series backdrop
         std::string url = serverUrl + "/Items/" + item.id + "/Images/Backdrop/0" + sizeqs;
-        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes);
+        int st = httpRequest(url, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX);
         if (st == 200 && !outBytes.empty()) return true;
         outBytes.clear();
     }
@@ -1652,7 +1663,7 @@ bool JellyfinClient::getChapterImageBytes(const std::string& serverUrl, const Je
     char qs[256];
     snprintf(qs, sizeof(qs), "/Items/%s/Images/Chapter/%d?maxWidth=%d&maxHeight=%d&quality=82&format=Jpg",
              itemId.c_str(), index, maxWidth, maxHeight);
-    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes) == 200;
+    return httpRequest(serverUrl + qs, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX) == 200;
 }
 
 bool JellyfinClient::getItemDetail(const std::string& serverUrl,
@@ -3424,7 +3435,7 @@ bool JellyfinClient::getTrickplayTile(const std::string& serverUrl,
     snprintf(path, sizeof(path), "/Videos/%s/Trickplay/%d/%d.jpg?MediaSourceId=%s",
              itemId.c_str(), width, index, mediaSourceId.c_str());
     outBytes.clear();
-    return httpRequest(serverUrl + path, "GET", "", "", auth.accessToken, outBytes) == 200;
+    return httpRequest(serverUrl + path, "GET", "", "", auth.accessToken, outBytes, IMAGE_MAX) == 200;
 }
 
 bool JellyfinClient::getSubtitleSrt(const std::string& serverUrl,

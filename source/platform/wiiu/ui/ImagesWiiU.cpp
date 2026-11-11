@@ -31,14 +31,14 @@ JellyfinAuth    s_auth;
 std::string     s_server;
 std::map<std::string, Entry> s_map;
 mutex_t  s_lock = LWP_MUTEX_NULL;
-/* two loaders, each with its own connection to the server (beside the one
+/* four loaders, each with its own connection to the server (beside the one
  * the pages' lists use) */
-const int LOADERS = 2;
-lwp_t    s_thread[LOADERS] = { LWP_THREAD_NULL, LWP_THREAD_NULL };
+const int LOADERS = 4;   /* the Wii U's three cores: downloads and JPEGs side by side */
+lwp_t    s_thread[LOADERS] = { LWP_THREAD_NULL, LWP_THREAD_NULL, LWP_THREAD_NULL, LWP_THREAD_NULL };
 volatile bool s_quit = false;
 unsigned s_frame = 0, s_ask = 0;
 
-const size_t BUDGET_POSTERS = 160, BUDGET_BACKDROPS = 5, BUDGET_LARGE = 6;
+const size_t BUDGET_POSTERS = 240, BUDGET_BACKDROPS = 6, BUDGET_LARGE = 10;
 
 std::string key(const std::string& id, Kind k)
 {
