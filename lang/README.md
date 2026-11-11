@@ -9,12 +9,12 @@ issue or on the Discord).
 WiiFin shows the Wii's own language (Wii Settings) when there is a file
 for it, English otherwise; **System Settings > Language** picks another.
 
-Every language of the Wii has a file: `de` `es` `fr` `it` `ja` `ko` `nl`
+Every language of the Wii (and the Wii U) has a file: `de` `es` `fr` `it` `ja` `ko` `nl`
 `zh_CN` `zh_TW` (English is the source).  French is reviewed; the others
 were drafted for 1.0 and wait for a native speaker's review: fixes are
 welcome, even a few lines.  Chinese and Korean are drawn with the font of
-`apps/WiiFin/fonts/` (in the release's zip): with the WAD alone, copy that
-folder to the SD card.
+`wiiu/apps/WiiFinU/fonts/` (in the release's zip): with the `.wuhb` alone,
+copy that folder to the SD card.
 
 ## Starting a language
 

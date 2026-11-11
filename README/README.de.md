@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/fabienmillet/WiiFin/refs/heads/main/assets/logo_wiifin_banner.png" alt="WiiFin-Logo" width="600"/><br>
-  <em>Jellyfin-Client für die Nintendo Wii</em>
+  <img src="../source/platform/wiiu/meta/icon.png" alt="WiiFin U" width="64"/><br>
+  <strong><big>WiiFin U</big></strong><br>
+  <em>Jellyfin-Client für die Nintendo Wii U</em>
 </p>
 
 <p align="center">
@@ -18,68 +19,72 @@
 ---
 
 <p align="center">
-<strong>WiiFin</strong> ist ein experimenteller Homebrew-Client für <a href="https://jellyfin.org">Jellyfin</a>, eigens für die Nintendo Wii entwickelt.<br>
-Er durchsucht und spielt deine Filme, Serien und Musik direkt auf der Konsole ab, geschrieben in C++ mit <a href="https://github.com/GRRLIB/GRRLIB">GRRLIB</a> und <a href="https://github.com/extremscorner/mplayer-ce">MPlayer CE</a>.
+<strong>WiiFin U</strong> ist ein Homebrew-Client für <a href="https://jellyfin.org">Jellyfin</a> auf der <strong>Nintendo Wii U</strong>, eine native Aroma-App.<br>
+Er durchsucht und spielt deine Filme, Serien und Musik auf der Konsole ab, in HD auf dem Fernseher. Er ist die Wii-U-Version von <a href="https://github.com/fabienmillet/WiiFin">WiiFin</a>, dem Jellyfin-Client für die Wii: derselbe Kern, mit eigenen Bildschirmen für Fernseher und GamePad.
 </p>
 
 <table align="center">
   <tr>
-    <td><img src="../assets/screenshots/main-menu.png" alt="Hauptmenü" width="420"/></td>
-    <td><img src="../assets/screenshots/film.png" alt="Ein Film" width="420"/></td>
+    <td><img src="../assets/screenshots/home.png" alt="Startseite" width="330"/></td>
+    <td><img src="../assets/screenshots/film.png" alt="Ein Film" width="330"/></td>
   </tr>
   <tr>
-    <td><img src="../assets/screenshots/player.png" alt="Der Player" width="420"/></td>
-    <td><img src="../assets/screenshots/now-playing.png" alt="Der Musikplayer" width="420"/></td>
+    <td><img src="../assets/screenshots/player.png" alt="Der Player" width="330"/></td>
+    <td><img src="../assets/screenshots/music.png" alt="Musik" width="330"/></td>
   </tr>
 </table>
-<p align="center"><sub><em>Big Buck Bunny</em> © Blender Foundation, <a href="https://peach.blender.org">peach.blender.org</a> (CC BY 3.0) · <em>Pill</em> von Heuse & Zeus X Crona feat. Emma Sameth, <a href="https://ncs.io">NCS</a></sub></p>
+<p align="center"><sub>Oben der Fernseher, unten das GamePad · <em>Big Buck Bunny</em> © Blender Foundation, <a href="https://peach.blender.org">peach.blender.org</a> (CC BY 3.0) · <em>EYES ON US</em> von 2frers, <a href="https://ncs.io">NCS</a></sub></p>
 
 ---
 
 ## 📦 Installation
 
-Lade die Dateien aus dem [neuesten Release](https://github.com/fabienmillet/WiiFin/releases) herunter:
+1. Eine Wii U mit [Aroma](https://aroma.foryour.cafe/).
+2. Entpacke `WiiFinU.zip` aus der [neuesten Version](https://github.com/fabienmillet/WiiFinU/releases) ins Hauptverzeichnis der SD-Karte (`wiiu/apps/WiiFinU.wuhb` und die Schrift für Chinesisch und Koreanisch); für die anderen Sprachen reicht `WiiFinU.wuhb` allein in `sd:/wiiu/apps/`.
+3. Starte **WiiFin U** über das Wii-U-Menü und melde dich mit Benutzername und Passwort oder per Quick Connect an deinem Jellyfin-Server an.
 
-- **Homebrew Channel**: entpacke `WiiFin-hbc.zip` ins Hauptverzeichnis deiner SD-Karte
-- **Kanal im Wii-Menü**: installiere `WiiFin.wad` mit einem WAD-Manager (Wii und vWii); für Chinesisch oder Koreanisch kopiere auch `apps/WiiFin/fonts/` aus dem Zip auf die SD-Karte
-- **Dolphin**: öffne `WiiFin.dol`
-
-Melde dich dann mit Benutzername und Passwort oder per Quick Connect an deinem Jellyfin-Server an.
+Einstellungen, Profile und das Protokoll (`wiifinu.log`, für Fehlerberichte) liegen in `sd:/wiiu/apps/WiiFinU/`.
 
 ## ✨ Highlights
 
-- **Filme, Serien und Musik** aus deinem Jellyfin: Direktwiedergabe dessen, was die Wii dekodiert, den Rest wandelt der Server um
-- Ein Startbildschirm aus **Reihen** oder als **Raster**, Reiter, Sortieren und filtern, Suche, A-Z
-- Ein **Player** mit den Vorschaubildern des Servers, Szenen und Kapiteln, Intro / Abspann überspringen, nächste Episode, Audio- und Untertitelspuren, Fortsetzen
-- **Musik**: ein „Wird gespielt“-Bildschirm mit Visualisierungen und synchronem Liedtext; sie läuft beim Stöbern weiter
-- **Fotos** mit Diashow, und Video-Playlists
-- **Profile**: mehrere Konten und Server, eine PIN, wenn du willst, jedes mit eigenem Design
-- **Fernsteuerung** über das Jellyfin-Dashboard und die Apps: Abspielen auf… Nintendo Wii
-- Die **zehn Sprachen der Wii**; Wiimote, Classic Controller, GameCube-Controller oder Wii U GamePad, keine Sensorleiste nötig
+- **Zwei Bildschirme wie im Wii-U-Menü**: Du navigierst auf dem GamePad (per Touch oder Tasten), der Fernseher zeigt das Ausgewählte groß: Hintergrundbild, Inhalt, Besetzung und die Reihe, in der es steht. Nur mit dem GamePad ist alles darauf
+- **HD**: Die Oberfläche wird in der Auflösung des Fernsehers gezeichnet, scharf in 720p und 1080p; Poster, Cover und Hintergründe werden in dieser Größe geladen
+- **Filme, Serien und Musik** aus deinem Jellyfin: H.264 bis **1080p** mit dem Decoder der Konsole; den Rest wandelt der Server um (480p, 720p oder 1080p, nach Wahl)
+- Während eines Videos ist das GamePad eine **Fernbedienung**: das Bild live, eine Leiste zum Springen, ±10 / 30 s, Audio- und Untertitelspuren, Zoom
+- **Musik** mit den Visualisierungen von WiiFin und synchronisierten Songtexten; sie läuft beim Stöbern weiter
+- Startseiten-Reihen (weiterschauen, als Nächstes, neu), Bibliotheken, Serien und Staffeln, Suche mit der Tastatur der Wii U
+- **Profile**: mehrere Konten und Server, Quick Connect, im Netzwerk gefundene Server
+- **Fernsteuerung** über das Dashboard und die Apps von Jellyfin
+- Die zehn Sprachen von WiiFin; GamePad, Pro Controller, Wiimote und Classic Controller
 
-Alles, was er kann, die Steuerung, die Einstellungen und eigene Klänge: das **[Benutzerhandbuch](../docs/USER_GUIDE.md)** (auf Englisch).
+Bildschirme, Tasten, Videogrenzen und das Kompilieren: **[docs/WIIU.md](../docs/WIIU.md)** (auf Englisch).
 
 ## ⚠️ Projektstatus
 
-> 🚧 **Experimentell**: funktionsfähig, aber noch in aktiver Entwicklung. Auf echter Hardware kann es noch hakeln.
+> 🚧 **Noch nicht veröffentlicht**: bisher im Emulator [Cemu](https://cemu.info) getestet, noch nicht auf einer Konsole. Testversionen gibt es auf Discord.
 
-- Direktwiedergabe nur für SD-Videos (siehe [DIRECT_PLAY.md](../DIRECT_PLAY.md)); Stereoton
-- Bilduntertitel (PGS, VobSub) brennt der Server ins Video ein
-- Mehr unter den [bekannten Einschränkungen](../docs/USER_GUIDE.md#%EF%B8%8F-known-limitations)
+- Die Videogrenzen sind vorsichtig, bis sie auf echten Konsolen gemessen sind
+- Bild-Untertitel (PGS, VobSub) brennt der Server ein
 
-## 🤝 Mitwirken
+## 🤝 Mitmachen
 
 Pull Requests, Fehlerberichte und Ideen sind willkommen:
 
-* 📘 Die [Richtlinien zum Mitwirken](../CONTRIBUTING.md) und wie man [WiiFin kompiliert](../docs/BUILDING.md)
-* 🌍 WiiFin in deine Sprache [übersetzen](../lang/README.md)
-* 🐛 Ein [Fehlerbericht](../.github/ISSUE_TEMPLATE/bug_report.yml) (mit `apps/WiiFin/wiifin.log` von der SD-Karte) oder ein 💡 [Funktionswunsch](../.github/ISSUE_TEMPLATE/feature_request.yml)
+* 📘 Die [Richtlinien für Beiträge](../CONTRIBUTING.md) und wie man [WiiFin U kompiliert](../docs/WIIU.md#building)
+* 🌍 In deine Sprache [übersetzen](../lang/README.md)
+* 🐛 Ein [Fehlerbericht](../.github/ISSUE_TEMPLATE/bug_report.yml) (mit `sd:/wiiu/apps/WiiFinU/wiifinu.log` von der SD-Karte) oder ein 💡 [Funktionswunsch](../.github/ISSUE_TEMPLATE/feature_request.yml)
 
 <a href="https://discord.gg/p9DXfEmUYu">
-  <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
+  <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Badge"/>
 </a>
+
+## 🙏 Danksagungen
+
+- [WiiFin](https://github.com/fabienmillet/WiiFin), dessen Kern WiiFin U teilt
+- [wut](https://github.com/devkitPro/wut) und der [Wii-U-Port von SDL2](https://github.com/devkitPro/SDL) (zlib; sein Textur-Shader), [Moonlight für Wii U](https://github.com/GaryOderNichts/moonlight-wiiu) (GPL-3.0; sein NV12-Shader und wie es den H.264-Decoder und die Tastatur der Konsole nutzt)
+- [FFmpeg](https://ffmpeg.org) (LGPL), [mbedTLS](https://www.trustedfirmware.org/projects/mbed-tls/) (Apache 2.0), [FreeType](https://freetype.org), [libjpeg-turbo](https://libjpeg-turbo.org), [libpng](http://www.libpng.org), [libmad](https://www.underbit.com/products/mad/) (GPL)
 
 ## 📜 Lizenz
 
 Dieses Projekt steht unter der **GPLv3**.
-Siehe die Datei [LICENSE](../LICENSE) für Details.
+Details in der Datei [LICENSE](../LICENSE).

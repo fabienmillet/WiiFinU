@@ -1029,6 +1029,19 @@ void playMain()
     av_log_set_level(AV_LOG_WARNING);
     s_videoActive = vIdx >= 0;
     failed = false;
+    /* a file played as it is, resumed: to its position first (a transcode
+     * starts there itself; MPlayer had -ss on the Wii) */
+    if (g_wiifin_direct && g_wiifin_ss_secs > 0.5f && s_mode == Mode::Video) {
+        const float ss = g_wiifin_ss_secs;
+        if (av_seek_frame(fmt, -1, (int64_t)(ss * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD) >= 0) {
+            if (vdec) avcodec_flush_buffers(vdec);
+            if (hw) { H264WiiU::reset(); if (bsf) av_bsf_flush(bsf); }
+            if (adec) avcodec_flush_buffers(adec);
+            SYS_Report("[PlayerWiiU] started at %.1f s\n", (double)ss);
+        } else {
+            SYS_Report("[PlayerWiiU] cannot start at %.1f s: from the start\n", (double)ss);
+        }
+    }
 
     {
         /* Packets are read ahead of the pictures: the sound is decoded as

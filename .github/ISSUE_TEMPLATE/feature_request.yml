@@ -1,5 +1,5 @@
 name: "\u2728 Feature Request"
-description: Suggest an idea for WiiFin
+description: Suggest an idea for WiiFin U
 title: "[Feature] "
 labels: ["enhancement"]
 body:
@@ -33,16 +33,16 @@ body:
     attributes:
       label: "\U0001F9E0 Example Use Case"
       description: Describe how this feature would be used in practice.
-      placeholder: 'e.g. "Add support for navigating the library with the D-Pad when the Wiimote pointer is disabled."'
+      placeholder: 'e.g. "Show the next episode on the TV while the credits roll."'
 
   - type: dropdown
     id: platform
     attributes:
-      label: "\U0001F3AE Platform Impact"
-      description: Is this feature useful for both platforms or only one?
+      label: "\U0001F3AE Screens"
+      description: Which setup is it about?
       options:
-        - Real Wii
-        - Dolphin Emulator
+        - The TV (and the GamePad as the navigation)
+        - The GamePad alone
         - Both
     validations:
       required: true
@@ -52,7 +52,7 @@ body:
     attributes:
       label: "\U0001F527 Technical Suggestions (optional)"
       description: If you have a rough idea on how this could be implemented, feel free to share.
-      placeholder: 'e.g. "Could be done using PAD_ButtonsDown() with a focus system."'
+      placeholder: 'e.g. "Could be done in Browse3ds with the stylus drag."'
 
   - type: textarea
     id: related

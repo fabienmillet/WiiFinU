@@ -1,14 +1,14 @@
-# WiiFin on the Nintendo Wii U
+# WiiFin U: WiiFin on the Nintendo Wii U
 
-WiiFin also runs on the **Wii U** as a native app (not in the vWii), under the name **WiiFin U** for now (`make -f Makefile.wiiu APP_NAME=...` changes it). It is built from the same sources as the Wii version (Jellyfin client, screens, player logic, settings, translations), drawn in 16:9 at the screens' own sizes, and it uses the console's own pieces: its two screens, the GamePad's touch screen, its keyboard, and its H.264 decoder for HD video.
+**WiiFin U** is WiiFin for the **Wii U**, a native app (not in the vWii). It is built from WiiFin's sources (its Jellyfin client, screens, player logic, settings and translations come from [WiiFin](https://github.com/fabienmillet/WiiFin), merged from upstream), drawn in 16:9 at the screens' own sizes, and it uses the console's own pieces: its two screens, the GamePad's touch screen, its keyboard, and its H.264 decoder for HD video.
 
 ## Install
 
 1. A Wii U with [Aroma](https://aroma.foryour.cafe/).
-2. Copy `WiiFin.wuhb` to `sd:/wiiu/apps/` on the SD card.
+2. Copy `WiiFinU.wuhb` to `sd:/wiiu/apps/` on the SD card.
 3. Start **WiiFin U** from the Wii U Menu.
 
-Settings, profiles and the log (`wiifin.log`, for bug reports) are kept in `sd:/wiiu/apps/WiiFin/`. Fonts and sounds can be added there as on the Wii (`fonts/`, `sounds/`).
+Settings, profiles and the log (`wiifinu.log`, for bug reports) are kept in `sd:/wiiu/apps/WiiFinU/` (the first test builds, named WiiFin, kept theirs in `sd:/wiiu/apps/WiiFin/`: moved there at the first start). Fonts and sounds can be added there as on the Wii (`fonts/`, `sounds/`).
 
 ## The two screens
 
@@ -82,17 +82,17 @@ Converted videos come as **H.264 + AAC**, decoded by the console's chip, at the 
 
 ```bash
 tools/wiiu/setup.sh          # devkitPPC, wut, the Wii U portlibs, mbedTLS and FFmpeg for the Wii U
-make -f Makefile.wiiu        # WiiFin.wuhb (and WiiFin.rpx)
+make                         # WiiFinU.wuhb (and WiiFinU.rpx); make WERROR=-Werror as the CI
 ```
 
 `setup.sh` installs `wiiu-dev` and the portlibs it uses with (dkp-)pacman (SDL2 for the sound, freetype, libpng, libjpeg-turbo, libmad...), cross-compiles mbedTLS 3.6 with WiiFin's config into `libs/mbedtls/libwiiu/` and FFmpeg into `libs/ffmpeg-wiiu/` (`tools/wiiu/build_ffmpeg.sh`). The `wiiu-mbedtls` package (pulled by `wiiu-curl`) must not be installed: its 2.x headers clash with WiiFin's.
 
 ### Testing in Cemu
 
-`tools/wiiu/test/run.sh <seconds> [every]` runs `WiiFin.wuhb` in [Cemu](https://cemu.info) (Flatpak `info.cemu.Cemu`) on a virtual X display and takes screenshots of the TV and the GamePad into `tools/wiiu/test/out/`, with WiiFin's log (from Cemu's: Cemu writes the SD card's files only when they are closed). `KEYS="10:a 14:t"` presses buttons at those seconds (`cemu_gamepad.xml`: A `a`, B `s`, X `z`, Y `x`, L `q`, R `w`, ZL `e`, ZR `r`, + `m`, - `n`, D-pad `t g f h`, L3 `j`, R3 `k`), `TAPS="12:427,240"` touches the GamePad, `DRAGS="12:100,200:300,200"` slides on it, `TYPE="20:some.host"` types text into Cemu's keyboard (its OK is then a tap on its check key, `TAPS="30:725,395"`; letters bound to buttons, such as `a` and `s`, press them too), `CFG=file` puts a `wiifin.cfg` on the card first (a profile already signed in), `CEMU_ARGS=--force-interpreter` runs Cemu's interpreter, `SOCKLOG=1` adds Cemu's socket calls to its log.
+`tools/wiiu/test/run.sh <seconds> [every]` runs `WiiFinU.wuhb` in [Cemu](https://cemu.info) (Flatpak `info.cemu.Cemu`) on a virtual X display and takes screenshots of the TV and the GamePad into `tools/wiiu/test/out/`, with WiiFin's log (from Cemu's: Cemu writes the SD card's files only when they are closed). `KEYS="10:a 14:t"` presses buttons at those seconds (`cemu_gamepad.xml`: A `a`, B `s`, X `z`, Y `x`, L `q`, R `w`, ZL `e`, ZR `r`, + `m`, - `n`, D-pad `t g f h`, L3 `j`, R3 `k`), `TAPS="12:427,240"` touches the GamePad, `DRAGS="12:100,200:300,200"` slides on it, `TYPE="20:some.host"` types text into Cemu's keyboard (its OK is then a tap on its check key, `TAPS="30:725,395"`; letters bound to buttons, such as `a` and `s`, press them too), `CFG=file` puts a `wiifinu.cfg` on the card first (a profile already signed in), `CEMU_ARGS=--force-interpreter` runs Cemu's interpreter, `SOCKLOG=1` adds Cemu's socket calls to its log.
 
 Known with Cemu (2.6): it needs no sound device set (it waits for one forever); its H.264 decoder (h264.rpl, done with libavc on the PC) shows a stream with B-frames (any server transcode) at about 6 pictures a second (they reach its texture cache late), so WiiFin decodes H.264 with FFmpeg there (Cemu's loader gives a stub for any function asked for, a console's doesn't: `H264WiiU::emulated`), 1080p included at 24 fps; its recompiler loops forever on a conditional trap (`tweq`: GCC makes them from checks such as `std::shared_ptr`'s count overflow): the build uses `-fno-if-conversion` (FFmpeg's too) and fails if one is left; its PPC recompiler gets some 64-bit comparisons wrong, which breaks FFmpeg's MKV and AVI demuxers (direct play of those files: fine with `--force-interpreter`, slow); `SYSLaunchMenu` is not there (leaving takes 4 s); its keyboard is its own (no Cancel, OK only; Enter does nothing; the controller's A is its OK and B its backspace).
 
 ## How the port works
 
-The Wii's sources are compiled as they are: `source/platform/wiiu/compat/` gives them the headers of libogc, GRRLIB and wiiuse, and the files next to it implement what they declare on the Wii U. See [source/platform/wiiu/README.md](../source/platform/wiiu/README.md).
+WiiFin's shared sources are compiled as they are: `source/platform/wiiu/compat/` gives them the headers of libogc, GRRLIB and wiiuse, and the files next to it implement what they declare on the Wii U. See [source/platform/wiiu/README.md](../source/platform/wiiu/README.md).

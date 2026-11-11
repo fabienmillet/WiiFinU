@@ -17,6 +17,6 @@ The Wii's sources build for the Wii U as they are, with a few `#ifdef __WIIU__` 
 | `JpegTextureWiiU.cpp`, `MiscWiiU.cpp` | Posters and photos into RGBA8 textures (2048 pixels a side at most: a 1080p backdrop whole); the music player's bars from the sound played; no reload from a DOL. |
 | `meta/` | The icon and the TV / GamePad splash screens of the `.wuhb`. |
 
-Excluded from the Wii U build (`WII_ONLY` in `Makefile.wiiu`): MPlayer's glue (`WiiPlayer.cpp`, `stream_wiifin.cpp`, `vo_wiifin.c`, `VideoSurface.cpp`, `OgcCompat.c`), `AudioSpectrum.cpp`, `JpegTexture.cpp`, `LwpJoinFix.cpp`, `Reload.cpp`.
+The Wii's own files (MPlayer CE's glue, the WAD and Homebrew Channel packaging, the Dolphin tests) are not in this repository; their headers stay where the shared code includes them (`WiiPlayer.h`, `vo_wiifin.h`, `stream_wiifin.h`, `VideoSurface.h`, `AudioSpectrum.h`, `JpegTexture.h`, `Reload.h`), implemented here.
 
 Credits: the shaders come from [SDL2's Wii U port](https://github.com/devkitPro/SDL) (zlib licence) and [Moonlight for Wii U](https://github.com/GaryOderNichts/moonlight-wiiu) (GPL-3.0), whose use of the H.264 decoder and of the keyboard this port follows.

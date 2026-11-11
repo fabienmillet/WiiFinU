@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/fabienmillet/WiiFin/refs/heads/main/assets/logo_wiifin_banner.png" alt="Logo di WiiFin" width="600"/><br>
-  <em>Client Jellyfin per Nintendo Wii</em>
+  <img src="../source/platform/wiiu/meta/icon.png" alt="WiiFin U" width="64"/><br>
+  <strong><big>WiiFin U</big></strong><br>
+  <em>Client Jellyfin per Nintendo Wii U</em>
 </p>
 
 <p align="center">
@@ -18,68 +19,72 @@
 ---
 
 <p align="center">
-<strong>WiiFin</strong> è un client homebrew sperimentale per <a href="https://jellyfin.org">Jellyfin</a>, pensato apposta per Nintendo Wii.<br>
-Sfoglia e riproduce i tuoi film, serie e musica direttamente sulla console. È scritto in C++ con <a href="https://github.com/GRRLIB/GRRLIB">GRRLIB</a> e <a href="https://github.com/extremscorner/mplayer-ce">MPlayer CE</a>.
+<strong>WiiFin U</strong> è un client homebrew per <a href="https://jellyfin.org">Jellyfin</a> su <strong>Nintendo Wii U</strong>, un'app Aroma nativa.<br>
+Sfoglia e riproduce i tuoi film, serie e musica sulla console, in HD sulla TV. È la versione per Wii U di <a href="https://github.com/fabienmillet/WiiFin">WiiFin</a>, il client Jellyfin per Wii: lo stesso nucleo, con schermate proprie per la TV e il GamePad.
 </p>
 
 <table align="center">
   <tr>
-    <td><img src="../assets/screenshots/main-menu.png" alt="Menu principale" width="420"/></td>
-    <td><img src="../assets/screenshots/film.png" alt="Un film" width="420"/></td>
+    <td><img src="../assets/screenshots/home.png" alt="Home" width="330"/></td>
+    <td><img src="../assets/screenshots/film.png" alt="Un film" width="330"/></td>
   </tr>
   <tr>
-    <td><img src="../assets/screenshots/player.png" alt="Il lettore" width="420"/></td>
-    <td><img src="../assets/screenshots/now-playing.png" alt="Il lettore musicale" width="420"/></td>
+    <td><img src="../assets/screenshots/player.png" alt="Il lettore" width="330"/></td>
+    <td><img src="../assets/screenshots/music.png" alt="Musica" width="330"/></td>
   </tr>
 </table>
-<p align="center"><sub><em>Big Buck Bunny</em> © Blender Foundation, <a href="https://peach.blender.org">peach.blender.org</a> (CC BY 3.0) · <em>Pill</em> di Heuse & Zeus X Crona feat. Emma Sameth, <a href="https://ncs.io">NCS</a></sub></p>
+<p align="center"><sub>Sopra la TV, sotto il GamePad · <em>Big Buck Bunny</em> © Blender Foundation, <a href="https://peach.blender.org">peach.blender.org</a> (CC BY 3.0) · <em>EYES ON US</em> di 2frers, <a href="https://ncs.io">NCS</a></sub></p>
 
 ---
 
 ## 📦 Installazione
 
-Scarica i file dall'[ultima release](https://github.com/fabienmillet/WiiFin/releases):
+1. Una Wii U con [Aroma](https://aroma.foryour.cafe/).
+2. Estrai `WiiFinU.zip` dall'[ultima versione](https://github.com/fabienmillet/WiiFinU/releases) nella radice della scheda SD (`wiiu/apps/WiiFinU.wuhb` e il font che servono al cinese e al coreano); per le altre lingue basta `WiiFinU.wuhb` da solo in `sd:/wiiu/apps/`.
+3. Avvia **WiiFin U** dal menu Wii U e accedi al tuo server Jellyfin con nome utente e password, oppure con Quick Connect.
 
-- **Homebrew Channel**: estrai `WiiFin-hbc.zip` nella radice della tua scheda SD
-- **Canale del menu Wii**: installa `WiiFin.wad` con un gestore di WAD (Wii e vWii); per cinese o coreano, copia anche `apps/WiiFin/fonts/` dallo zip sulla scheda SD
-- **Dolphin**: apri `WiiFin.dol`
+Impostazioni, profili e il registro (`wiifinu.log`, per segnalare i bug) sono in `sd:/wiiu/apps/WiiFinU/`.
 
-Poi accedi al tuo server Jellyfin con nome utente e password, oppure con Quick Connect.
+## ✨ In evidenza
 
-## ✨ Punti di forza
+- **Due schermi, come il menu Wii U**: navighi sul GamePad (al tocco o con i tasti), la TV mostra in grande ciò che è selezionato: lo sfondo, la trama, il cast e la riga in cui si trova. Con il solo GamePad, tutto è lì
+- **HD**: l'interfaccia è disegnata alla risoluzione della TV, nitida in 720p e 1080p; locandine, copertine e sfondi sono caricati a quella dimensione
+- **Film, serie e musica** dal tuo Jellyfin: H.264 fino a **1080p** con il decoder della console; il server converte il resto (480p, 720p o 1080p, a scelta)
+- Durante un video il GamePad è un **telecomando**: l'immagine dal vivo, una barra per andare ovunque, ±10 / 30 s, tracce audio e sottotitoli, zoom
+- **Musica** con i visualizzatori di WiiFin e i testi sincronizzati; continua mentre navighi
+- Righe della home (continua a guardare, prossimi, novità), librerie, serie e stagioni, ricerca con la tastiera della Wii U
+- **Profili**: più account e server, Quick Connect, server trovati in rete
+- **Controllo remoto** dalla dashboard e dalle app di Jellyfin
+- Le dieci lingue di WiiFin; GamePad, Pro Controller, Wiimote e Classic Controller
 
-- **Film, serie e musica** dal tuo Jellyfin: riproduzione diretta di ciò che la Wii decodifica, il server converte il resto
-- Una schermata iniziale a **righe** o a **griglia**, schede, ordinamento e filtri, ricerca, A-Z
-- Un **lettore** con le miniature del server, scene e capitoli, salta intro / titoli di coda, episodio successivo, tracce audio e sottotitoli, riprendi da dove avevi lasciato
-- **Musica**: una schermata In riproduzione con visualizzatori e testi sincronizzati; continua mentre sfogli
-- **Foto** con presentazione, e playlist di video
-- **Profili**: più account e server, un codice se vuoi, ognuno con il suo tema
-- **Controllo remoto** dalla dashboard e dalle app di Jellyfin: Riproduci su… Nintendo Wii
-- Le **dieci lingue della Wii**; Wiimote, Controller Classico, controller GameCube o Wii U GamePad, senza barra sensore
-
-Tutto ciò che fa, i controlli, le impostazioni e i suoni personalizzati: la **[guida utente](../docs/USER_GUIDE.md)** (in inglese).
+Schermi, tasti, limiti video e compilazione: **[docs/WIIU.md](../docs/WIIU.md)** (in inglese).
 
 ## ⚠️ Stato del progetto
 
-> 🚧 **Sperimentale**: funzionante, ma ancora in pieno sviluppo. Su una console vera possono esserci imperfezioni.
+> 🚧 **Non ancora pubblicato**: finora provato nell'emulatore [Cemu](https://cemu.info), non ancora su console. Le versioni di prova saranno condivise su Discord.
 
-- Riproduzione diretta solo per i video SD (vedi [DIRECT_PLAY.md](../DIRECT_PLAY.md)); audio stereo
-- I sottotitoli a immagine (PGS, VobSub) li imprime il server nel video
-- Altro nelle [limitazioni note](../docs/USER_GUIDE.md#%EF%B8%8F-known-limitations)
+- I limiti video sono prudenti finché non saranno misurati su console vere
+- I sottotitoli a immagine (PGS, VobSub) sono impressi dal server
 
 ## 🤝 Contribuire
 
 Pull request, segnalazioni di bug e idee sono benvenute:
 
-* 📘 Le [linee guida per contribuire](../CONTRIBUTING.md), e come [compilare WiiFin](../docs/BUILDING.md)
-* 🌍 [Tradurre](../lang/README.md) WiiFin nella tua lingua
-* 🐛 Una [segnalazione di bug](../.github/ISSUE_TEMPLATE/bug_report.yml) (con `apps/WiiFin/wiifin.log` dalla scheda SD) o una 💡 [richiesta di funzionalità](../.github/ISSUE_TEMPLATE/feature_request.yml)
+* 📘 Le [linee guida per contribuire](../CONTRIBUTING.md) e come [compilare WiiFin U](../docs/WIIU.md#building)
+* 🌍 [Tradurre](../lang/README.md) nella tua lingua
+* 🐛 Una [segnalazione di bug](../.github/ISSUE_TEMPLATE/bug_report.yml) (con `sd:/wiiu/apps/WiiFinU/wiifinu.log` dalla scheda SD) o una 💡 [richiesta di funzionalità](../.github/ISSUE_TEMPLATE/feature_request.yml)
 
 <a href="https://discord.gg/p9DXfEmUYu">
-  <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
+  <img src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Badge"/>
 </a>
+
+## 🙏 Ringraziamenti
+
+- [WiiFin](https://github.com/fabienmillet/WiiFin), di cui WiiFin U condivide il nucleo
+- [wut](https://github.com/devkitPro/wut) e il [port di SDL2 per Wii U](https://github.com/devkitPro/SDL) (zlib; il suo shader delle texture), [Moonlight per Wii U](https://github.com/GaryOderNichts/moonlight-wiiu) (GPL-3.0; il suo shader NV12 e il modo in cui usa il decoder H.264 e la tastiera della console)
+- [FFmpeg](https://ffmpeg.org) (LGPL), [mbedTLS](https://www.trustedfirmware.org/projects/mbed-tls/) (Apache 2.0), [FreeType](https://freetype.org), [libjpeg-turbo](https://libjpeg-turbo.org), [libpng](http://www.libpng.org), [libmad](https://www.underbit.com/products/mad/) (GPL)
 
 ## 📜 Licenza
 
 Questo progetto è distribuito con licenza **GPLv3**.
-Vedi il file [LICENSE](../LICENSE) per i dettagli.
+Vedi il file [LICENSE](../LICENSE) per maggiori dettagli.

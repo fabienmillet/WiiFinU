@@ -22,7 +22,7 @@ body:
       label: "\U0001F4CB Steps to Reproduce"
       description: Describe the exact steps to reproduce the issue.
       placeholder: |
-        1. Launch WiiFin using [Dolphin Emulator / Real Wii]
+        1. Start WiiFin U on [a Wii U with a TV / the GamePad alone / Cemu]
         2. Go to menu: ...
         3. Click on: ...
         4. Observe: ...
@@ -48,41 +48,39 @@ body:
     attributes:
       label: "\U0001F3AE Platform"
       options:
-        - Real Wii
-        - Dolphin Emulator
-        - Both
+        - Wii U with a TV
+        - Wii U, the GamePad alone
+        - Cemu (emulator)
     validations:
       required: true
 
   - type: input
     id: wii_model
     attributes:
-      label: Wii Model / Emulator Version
-      placeholder: "e.g. RVL-001 / Dolphin 5.0-xxxxx"
+      label: Console model / Emulator version
+      placeholder: "e.g. Wii U 32 GB, firmware 5.5.6, Aroma / Cemu 2.6"
 
   - type: input
-    id: wiifin_version
+    id: version
     attributes:
-      label: WiiFin Version / Commit
-      placeholder: "e.g. 1.0.0-rc1, or commit SHA"
+      label: WiiFin U Version / Commit
+      placeholder: "e.g. 0.1.0, or commit SHA"
     validations:
       required: true
 
   - type: dropdown
     id: controller
     attributes:
-      label: Controller
+      label: Controls
       options:
-        - Wiimote
-        - GameCube Controller
-        - Emulated Controller
+        - GamePad (buttons)
+        - GamePad (touch screen)
+        - Pro Controller
+        - Wii Remote / Classic Controller
 
-  - type: dropdown
-    id: resolution
+
+  - type: textarea
+    id: log
     attributes:
-      label: TV Resolution / Mode
-      options:
-        - 480i (NTSC)
-        - 480p (NTSC)
-        - PAL
-        - Other
+      label: "\U0001F4DD Log"
+      description: "Attach `sd:/wiiu/apps/WiiFinU/wiifinu.log` from the SD card (and `wiifinu.prev.log` if WiiFin U was started again after the bug). It hides addresses, tokens and user ids: it can be shared as it is."
