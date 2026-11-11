@@ -73,7 +73,10 @@ INCLUDE     := -I$(CURDIR)/$(PWU)/compat \
                -I$(PORTLIBS)/ppc/include/libpng16 -I$(WUT_ROOT)/include
 
 WERROR      ?=
-CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP -ffunction-sections -fdata-sections \
+# -fno-if-conversion: no conditional traps (tweq, from libstdc++'s checks
+# such as shared_ptr's count overflow): Cemu's recompiler loops forever on
+# them (WiiFin froze on sign-in there); the console runs either
+CFLAGS      := -g -O2 -fno-if-conversion -fno-if-conversion2 -Wall $(WERROR) -MMD -MP -ffunction-sections -fdata-sections \
                $(MACHDEP) -D__WIIU__ -D__WUT__ -DAPP_NAME='"$(APP_NAME)"' $(INCLUDE)
 CXXFLAGS    := $(CFLAGS) -fno-rtti -std=gnu++17
 LDFLAGS     := -specs=$(WUT_ROOT)/share/wut.specs -g $(MACHDEP) -Wl,-Map,$(TARGET).wiiu.map -Wl,--gc-sections \
@@ -96,7 +99,11 @@ $(TARGET).wuhb: $(TARGET).rpx $(PWU)/meta/icon.png $(PWU)/meta/splash_tv.png $(P
 		--icon=$(PWU)/meta/icon.png --tv-image=$(PWU)/meta/splash_tv.png --drc-image=$(PWU)/meta/splash_drc.png
 	@echo built ... $@
 
+# no conditional trap may be left (see CFLAGS): `trap` and `twu` (always
+# taken: a bug, abort) are the only ones allowed
 $(TARGET).rpx: $(TARGET).wiiu.elf
+	@T=$$($(PREFIX)objdump -d --no-show-raw-insn $< | grep -P '\ttw(?!u )[a-z]*i? ' | head -5); \
+	if [ -n "$$T" ]; then echo "conditional traps (Cemu loops on them):"; echo "$$T"; exit 1; fi
 	$(TOOLS)/elf2rpl $< $@
 
 $(TARGET).wiiu.elf: $(OFILES)

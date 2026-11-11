@@ -161,7 +161,8 @@ Result edit(std::string& text, const char* okLabel, bool password, size_t maxLen
     arg.keyboardArg.configArg.okString = s_ok.c_str();
     arg.keyboardArg.configArg.showWordSuggestions = false;
     arg.keyboardArg.configArg.disableNewLine = true;
-    arg.inputFormArg.initialText = s_initial.c_str();
+    /* none when empty: Cemu would show the last text typed */
+    arg.inputFormArg.initialText = s_initial.empty() ? nullptr : s_initial.c_str();
     arg.inputFormArg.maxTextLength = (int32_t)(maxLen > 0 && maxLen < 1000 ? maxLen : -1);
     arg.inputFormArg.passwordMode = password ? nn::swkbd::PasswordMode::Fade : nn::swkbd::PasswordMode::Clear;
     if (!nn::swkbd::AppearInputForm(arg)) {
@@ -169,6 +170,7 @@ Result edit(std::string& text, const char* okLabel, bool password, size_t maxLen
         return Result::Unavailable;
     }
     s_st = St::Shown;
+    SYS_Report("[SwkbdWiiU] shown (frame %u)\n", GfxWiiU::frames());
     return Result::Busy;
 }
 
@@ -197,6 +199,12 @@ void calc()
     nn::swkbd::Calc(info);
     if (nn::swkbd::IsNeedCalcSubThreadFont()) nn::swkbd::CalcSubThreadFont();
     if (nn::swkbd::IsNeedCalcSubThreadPredict()) nn::swkbd::CalcSubThreadPredict();
+    static int lastState = -1;
+    const int state = (int)nn::swkbd::GetStateInputForm();
+    if (state != lastState) {
+        SYS_Report("[SwkbdWiiU] state %d (frame %u)\n", state, GfxWiiU::frames());
+        lastState = state;
+    }
     if (s_st != St::Shown) return;
     if (nn::swkbd::IsDecideOkButton(nullptr)) {
         const char16_t* s = nn::swkbd::GetInputFormString();
@@ -204,15 +212,18 @@ void calc()
         nn::swkbd::DisappearInputForm();
         s_goneAt = GfxWiiU::frames();
         s_st = St::Ok;
+        SYS_Report("[SwkbdWiiU] OK (frame %u)\n", s_goneAt);
     } else if (nn::swkbd::IsDecideCancelButton(nullptr)) {
         nn::swkbd::DisappearInputForm();
         s_goneAt = GfxWiiU::frames();
         s_st = St::Cancel;
+        SYS_Report("[SwkbdWiiU] cancelled (frame %u)\n", s_goneAt);
     } else if (GfxWiiU::frames() - s_lastAsked > 3) {
         /* the field closed by WiiFin meanwhile */
         nn::swkbd::DisappearInputForm();
         s_goneAt = GfxWiiU::frames();
         s_st = St::Off;
+        SYS_Report("[SwkbdWiiU] closed by WiiFin (frame %u)\n", s_goneAt);
     }
 }
 

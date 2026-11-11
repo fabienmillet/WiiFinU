@@ -478,8 +478,15 @@ void ConnectView::handleVKBInput(ir_t& ir) {
     switch (kb.update(ir, fields[fi], 255)) {
     case Keyboard::Result::Enter:
         /* OK walks through the fields, then lands on Connect */
+#ifdef __WIIU__
+        /* the system's keyboard: one field at a time (A opens the next),
+         * the server alone is enough for Quick Connect */
+        kbActive = false;
+        focusedField = (Field)(fi + 1);
+#else
         if (fi < 2) { focusedField = (Field)(fi + 1); kb.reset(); }
         else        { kbActive = false; focusedField = Field::SubmitBtn; }
+#endif
         break;
     case Keyboard::Result::Cancel:
         kbActive = false;

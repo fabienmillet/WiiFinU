@@ -46,7 +46,7 @@ The GamePad's buttons work in every mode.
 
 A **Wii Remote** works as on the Wii, its pointer included. The hints at the bottom of the screens name the controller used last.
 
-Text (the server's address, a password, a search) is typed with the **Wii U's own keyboard** on the GamePad.
+Text (the server's address, a password, a search) is typed with the **Wii U's own keyboard** on the GamePad, one field at a time: on the sign-in screen, OK moves to the next field and A opens its keyboard (the server's address is all Quick Connect needs).
 
 ## Video
 
@@ -83,9 +83,9 @@ make -f Makefile.wiiu        # WiiFin.wuhb (and WiiFin.rpx)
 
 ### Testing in Cemu
 
-`tools/wiiu/test/run.sh <seconds> [every]` runs `WiiFin.wuhb` in [Cemu](https://cemu.info) (Flatpak `info.cemu.Cemu`) on a virtual X display and takes screenshots of the TV and the GamePad into `tools/wiiu/test/out/`, with WiiFin's log (from Cemu's: Cemu writes the SD card's files only when they are closed). `KEYS="10:a 14:t"` presses buttons at those seconds (`cemu_gamepad.xml`: A `a`, B `s`, X `z`, Y `x`, L `q`, R `w`, ZL `e`, ZR `r`, + `m`, - `n`, D-pad `t g f h`, L3 `j`, R3 `k`), `TAPS="12:427,240"` touches the GamePad, `DRAGS="12:100,200:300,200"` slides on it, `CFG=file` puts a `wiifin.cfg` on the card first (a profile already signed in), `CEMU_ARGS=--force-interpreter` runs Cemu's interpreter.
+`tools/wiiu/test/run.sh <seconds> [every]` runs `WiiFin.wuhb` in [Cemu](https://cemu.info) (Flatpak `info.cemu.Cemu`) on a virtual X display and takes screenshots of the TV and the GamePad into `tools/wiiu/test/out/`, with WiiFin's log (from Cemu's: Cemu writes the SD card's files only when they are closed). `KEYS="10:a 14:t"` presses buttons at those seconds (`cemu_gamepad.xml`: A `a`, B `s`, X `z`, Y `x`, L `q`, R `w`, ZL `e`, ZR `r`, + `m`, - `n`, D-pad `t g f h`, L3 `j`, R3 `k`), `TAPS="12:427,240"` touches the GamePad, `DRAGS="12:100,200:300,200"` slides on it, `TYPE="20:some.host"` types text into Cemu's keyboard (its OK is then a tap on its check key, `TAPS="30:725,395"`; letters bound to buttons, such as `a` and `s`, press them too), `CFG=file` puts a `wiifin.cfg` on the card first (a profile already signed in), `CEMU_ARGS=--force-interpreter` runs Cemu's interpreter, `SOCKLOG=1` adds Cemu's socket calls to its log.
 
-Known with Cemu (2.6): it needs no sound device set (it waits for one forever); its PPC recompiler gets some 64-bit comparisons wrong, which breaks FFmpeg's MKV and AVI demuxers (direct play of those files: fine with `--force-interpreter`, slow); `SYSLaunchMenu` is not there (leaving takes 4 s); its keyboard is its own.
+Known with Cemu (2.6): it needs no sound device set (it waits for one forever); its recompiler loops forever on a conditional trap (`tweq`: GCC makes them from checks such as `std::shared_ptr`'s count overflow): the build uses `-fno-if-conversion` (FFmpeg's too) and fails if one is left; its PPC recompiler gets some 64-bit comparisons wrong, which breaks FFmpeg's MKV and AVI demuxers (direct play of those files: fine with `--force-interpreter`, slow); `SYSLaunchMenu` is not there (leaving takes 4 s); its keyboard is its own (no Cancel, OK only; Enter does nothing; the controller's A is its OK and B its backspace).
 
 ## How the port works
 

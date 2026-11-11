@@ -9,6 +9,8 @@
 #                         D-pad t g f h, L3 j, R3 k, HOME o)
 #   TAPS="12:427,240"     touches on the GamePad (its 854x480 pixels)
 #   DRAGS="12:100,200:300,200"  a finger slid from one point to the other
+#   TYPE="20:some.host"   text typed on the host keyboard (Cemu's keyboard takes it)
+#                         ("_" for a space); KEYS="22:Return" validates it
 #   CFG=file              put a wiifin.cfg on the card first (a profile)
 #   APP=WiiFin.rpx        run that instead of WiiFin.wuhb
 #   AUDIO=1               with sound (Cubeb) into a silent PipeWire sink
@@ -47,7 +49,7 @@ s = re.sub(r'(<Graphic>\s*<api>)\d(</api>)', r'\g<1>1\2', s)
 audio = __import__('os').environ.get('AUDIO')
 s = re.sub(r'(<Audio>\s*<api>)\d(</api>)', r'\g<1>3\2', s)   # Cubeb (0 is DirectSound)
 s = re.sub(r'<TVDevice>[^<]*</TVDevice>', '<TVDevice>default</TVDevice>' if audio else '<TVDevice></TVDevice>', s)
-s = re.sub(r'<logflag>\d+</logflag>', '<logflag>' + str(131077 + (512 if __import__('os').environ.get('H264LOG') else 0)) + '</logflag>', s)   # files, unsupported calls, OSReport (+ H.264)
+s = re.sub(r'<logflag>\d+</logflag>', '<logflag>' + str(131077 + (64 if __import__('os').environ.get('SOCKLOG') else 0) + (512 if __import__('os').environ.get('H264LOG') else 0)) + '</logflag>', s)   # files, unsupported calls, OSReport (+ H.264)
 s = re.sub(r'<check_update>true</check_update>', '<check_update>false</check_update>', s)
 s = re.sub(r'<open_pad>false</open_pad>', '<open_pad>true</open_pad>', s)
 s = re.sub(r'<window_position>.*?</window_position>', '<window_position>\n        <x>0</x>\n        <y>0</y>\n    </window_position>', s, flags=re.S)
@@ -88,6 +90,7 @@ ACTIONS=$(
   for k in ${KEYS:-}; do echo "${k%%:*} key ${k#*:}"; done
   for t in ${TAPS:-}; do echo "${t%%:*} tap ${t#*:}"; done
   for d in ${DRAGS:-}; do echo "${d%%:*} drag ${d#*:}"; done
+  for t in ${TYPE:-}; do echo "${t%%:*} type ${t#*:}"; done
   for ((s = EVERY; s <= SECS; s += EVERY)); do echo "$s shot"; done
 )
 ACTIONS=$(echo "$ACTIONS" | sort -n)
@@ -104,6 +107,10 @@ while read -r at what arg; do
         W=$(tvwin); [ -n "$W" ] && xdotool windowactivate --sync "$W" 2>/dev/null
         xdotool keydown "$arg"; sleep 0.15; xdotool keyup "$arg"
         echo "$at key $arg" >> "$OUT/actions.txt" ;;
+    type)
+        W=$(tvwin); [ -n "$W" ] && xdotool windowactivate --sync "$W" 2>/dev/null
+        xdotool type --delay 120 "${arg//_/ }"
+        echo "$at type $arg" >> "$OUT/actions.txt" ;;
     tap|drag)
         P=$(padwin)
         if [ -n "$P" ]; then

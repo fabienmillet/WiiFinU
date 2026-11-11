@@ -18,7 +18,7 @@ cd "$DEPS"
 rm -rf ffmpeg-build-wiiu && mkdir ffmpeg-build-wiiu && cd ffmpeg-build-wiiu
 ../ffmpeg-$VER/configure --prefix="$OUT" \
   --enable-cross-compile --cross-prefix=powerpc-eabi- --arch=ppc --cpu=750 --target-os=none \
-  --extra-cflags="-DESPRESSO -mcpu=750 -meabi -mhard-float -D__WIIU__ -D__WUT__ -I$WUT/include -ffunction-sections -fdata-sections -Wno-incompatible-pointer-types" \
+  --extra-cflags="-DESPRESSO -mcpu=750 -meabi -mhard-float -D__WIIU__ -D__WUT__ -I$WUT/include -ffunction-sections -fdata-sections -fno-if-conversion -fno-if-conversion2 -Wno-incompatible-pointer-types" \
   --extra-ldflags="-specs=$WUT/share/wut.specs -L$WUT/lib" --extra-libs="-lwut" \
   --disable-programs --disable-doc --disable-debug --disable-network --disable-everything \
   --disable-avdevice --disable-avfilter --disable-postproc --disable-iconv \
