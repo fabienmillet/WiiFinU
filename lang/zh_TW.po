@@ -2045,3 +2045,6 @@ msgstr "電視上 720p，由主機晶片解碼"
 
 msgid "Videos at 1080p on the TV, decoded by the console's own chip"
 msgstr "電視上 1080p，由主機晶片解碼"
+
+msgid "Back to the Wii U Menu?"
+msgstr "返回 Wii U 選單？"

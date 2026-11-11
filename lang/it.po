@@ -2046,3 +2046,6 @@ msgstr "Video a 720p sulla TV, decodificati dal chip della console"
 
 msgid "Videos at 1080p on the TV, decoded by the console's own chip"
 msgstr "Video a 1080p sulla TV, decodificati dal chip della console"
+
+msgid "Back to the Wii U Menu?"
+msgstr "Tornare al menu Wii U?"

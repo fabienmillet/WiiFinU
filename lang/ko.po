@@ -2046,3 +2046,6 @@ msgstr "TV에서 720p, 본체 칩으로 디코딩"
 
 msgid "Videos at 1080p on the TV, decoded by the console's own chip"
 msgstr "TV에서 1080p, 본체 칩으로 디코딩"
+
+msgid "Back to the Wii U Menu?"
+msgstr "Wii U 메뉴로 돌아갈까요?"

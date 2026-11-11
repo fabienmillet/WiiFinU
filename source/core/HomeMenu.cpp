@@ -38,9 +38,9 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
     const int BTN_Y = 195;
     const int B0X   =  65;
     const int B1X   = 345;
-#ifdef __3DS__
-    /* the 3DS: Exit (to the Homebrew Launcher) alone, in the middle; the
-     * console's own HOME button is the system's menu */
+#if defined(__3DS__) || defined(__WIIU__)
+    /* the 3DS, the Wii U: Exit alone, in the middle; the console's own
+     * HOME button is the system's menu */
     const int NB = 1;
     float bcx[2] = { 320.0f, 320.0f };
     (void)B0X; (void)B1X;
@@ -187,7 +187,11 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
         Ui::shadow(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 8.0f, P.shadow);
         Ui::roundRect(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, P.barTop, P.barBottom);
         Ui::roundBorder(Ui::screenLeft() - 20, -30, Ui::screenWidth() + 40, 92, 22, 1.5f, P.barBorder);
+#ifdef __WIIU__
+        Ui::text(28, 17, tr("WiiFin Menu"), 26, P.text);   /* (+: HOME is the system's) */
+#else
         Ui::text(28, 17, tr("HOME Menu"), 26, P.text);
+#endif
         Ui::popOffset();
 
         Ui::pushOffset(0, slideF);
@@ -204,7 +208,7 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
             float dw = BTN_W * sc, dh = BTN_H * sc;
             bool  sel = (hmSel == i);
             Ui::button(bcx[i] - dw * 0.5f, bcy - dh * 0.5f, dw, dh,
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
                        N_("Exit"), (int)(22 * sc),
 #else
                        i == 0 ? N_("Wii Menu") : N_("Reset"), (int)(22 * sc),
@@ -224,6 +228,8 @@ bool doShowHomeOverlay(GRRLIB_ttfFont* font, GRRLIB_texImg* btnTex,
 
 #ifdef __3DS__
             const char* line1 = tr("Back to the Homebrew Launcher?");
+#elif defined(__WIIU__)
+            const char* line1 = tr("Back to the Wii U Menu?");
 #else
             const char* line1 = (confirmFor == 0)
                 ? tr("Return to the Wii Menu?")
