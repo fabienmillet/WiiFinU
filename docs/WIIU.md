@@ -57,7 +57,7 @@ As on the Wii, a file the console can decode plays as it is (*Settings > Direct 
 - The sound: MP3, MP2, AAC, AC-3, E-AC-3, Vorbis, Opus, FLAC, mixed down to stereo.
 - The GPU draws the pictures as they come (NV12), BT.601 or BT.709, video range.
 
-*Settings > HD Video* (for the TV): **480p** (MPEG-4 from the server, as the Wii), **720p** (default) or **1080p**: H.264 + AAC from the server, decoded by the console's chip. On the GamePad (854x480) videos are always asked at 480p. If the console's decoder refuses a stream, WiiFin goes back to 480p MPEG-4 for the session.
+Converted videos come as **H.264 + AAC**, decoded by the console's chip, at the size of *Settings > HD Video* on the TV (**480p**, **720p** (default) or **1080p**) and always at 480p on the GamePad (854x480). If the console's decoder refuses a stream, WiiFin goes back to 480p MPEG-4 (FFmpeg, as the Wii) for the session.
 
 | Direct play | Limits (to widen with a console) |
 |---|---|

@@ -2543,11 +2543,13 @@ int JellyfinClient::videoBitrate() const {
 int JellyfinClient::qualityBitrate(int q) {
 #ifdef __WIIU__
     /* the Wii U: 480p MPEG-4 as the Wii's, H.264 for its HD */
+    static const int sd264[VIDEO_QUALITY_COUNT]  = { 1000000, 1500000, 2200000, 3000000 };
     static const int hd720[VIDEO_QUALITY_COUNT]  = { 2000000, 3000000, 4500000, 6000000 };
     static const int hd1080[VIDEO_QUALITY_COUNT] = { 3000000, 5000000, 8000000, 12000000 };
     const int qi = (q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1;
     if (PlayerWiiU::hdNow() == PlayerWiiU::HD_1080) return hd1080[qi];
     if (PlayerWiiU::hdNow() == PlayerWiiU::HD_720) return hd720[qi];
+    if (PlayerWiiU::h264Now()) return sd264[qi];
 #endif
 #ifdef __3DS__
     /* the 3DS: 400x240 at most, decoded in software (the old 3DS's 268 MHz) */
@@ -3031,11 +3033,12 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
         videoBps + AUDIO_BPS, (long long)startTimeTicks, codecProfiles);
 
 #ifdef __WIIU__
-    /* HD: H.264 (the console's decoder) and AAC, at 720p or 1080p */
+    /* H.264 (the console's decoder) and AAC, at 480p, 720p or 1080p */
     const int wiiuHd = PlayerWiiU::hdNow();
-    const char* hdW = wiiuHd == PlayerWiiU::HD_1080 ? "1920" : "1280";
-    const char* hdH = wiiuHd == PlayerWiiU::HD_1080 ? "1080" : "720";
-    if (wiiuHd != PlayerWiiU::HD_OFF) {
+    const bool wiiuH264 = PlayerWiiU::h264Now();
+    const char* hdW = wiiuHd == PlayerWiiU::HD_1080 ? "1920" : wiiuHd == PlayerWiiU::HD_720 ? "1280" : "854";
+    const char* hdH = wiiuHd == PlayerWiiU::HD_1080 ? "1080" : wiiuHd == PlayerWiiU::HD_720 ? "720" : "480";
+    if (wiiuH264) {
         std::string b(bodyBuf);
         auto swap = [&b](const std::string& from, const std::string& to) {
             size_t at = b.find(from);
@@ -3086,7 +3089,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     snprintf(vbBuf, sizeof(vbBuf), "%d", videoBps);
     snprintf(abBuf, sizeof(abBuf), "%d", AUDIO_BPS);
 #ifdef __WIIU__
-    if (wiiuHd != PlayerWiiU::HD_OFF) {
+    if (wiiuH264) {
         urlReplaceParam(relUrl, "VideoCodec", "h264");
         urlReplaceParam(relUrl, "AudioCodec", "aac");
         urlReplaceParam(relUrl, "AudioBitrate", abBuf);

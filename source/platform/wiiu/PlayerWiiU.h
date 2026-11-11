@@ -9,13 +9,15 @@ bool videoActive();
  * it): the GamePad's remote.  false: none. */
 bool drawPreview(float x, float y, float w, float h);
 
-/* HD video on the TV (Settings > HD Video, saved as wiiu_hd): H.264
- * converted to 720p or 1080p by the server, decoded by the console's own
- * decoder.  On the GamePad (or once that decoder refused a stream):
- * 480p, MPEG-4. */
+/* HD video on the TV (Settings > HD Video, saved as wiiu_hd): 480p,
+ * 720p or 1080p.  Videos come as H.264 (the console's own decoder) at that
+ * size on the TV, at 480p on the GamePad; once that decoder refused a
+ * stream, as MPEG-4 at 480p (FFmpeg, as the Wii). */
 enum Hd { HD_OFF = 0, HD_720 = 1, HD_1080 = 2 };
 void setHd(int hd);
 int  hd();
-/* what playback asks for now: the setting on the TV, else HD_OFF */
+/* what playback asks for now: the size (the setting on the TV, 480p on
+ * the GamePad), and whether as H.264 */
 int  hdNow();
+bool h264Now();
 }

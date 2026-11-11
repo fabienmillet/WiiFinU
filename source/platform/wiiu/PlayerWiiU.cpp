@@ -1452,6 +1452,7 @@ bool PlayerWiiU::drawPreview(float x, float y, float w, float h)
 
 namespace { int s_hd = PlayerWiiU::HD_720; }
 void PlayerWiiU::setHd(int hd) { s_hd = hd < HD_OFF ? HD_OFF : hd > HD_1080 ? HD_1080 : hd; }
+bool PlayerWiiU::h264Now() { return !s_hwBroken; }
 int  PlayerWiiU::hd() { return s_hd; }
 int  PlayerWiiU::hdNow()
 {
