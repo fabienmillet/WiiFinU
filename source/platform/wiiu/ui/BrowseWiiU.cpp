@@ -8,6 +8,7 @@
 #include "../GfxWiiU.h"
 #include "../InputWiiU.h"
 #include "../SwkbdWiiU.h"
+#include "../PlatformWiiU.h"
 #include "../../../ui/Ui.h"
 #include "../../../input/Input.h"
 #include "../../../core/Lang.h"
@@ -783,7 +784,14 @@ int BrowseWiiU::drawBar(Page& p)
     }
     const int n = home ? 3 : 2;
     const Icon* icons = home ? HOME_ICONS : PAGE_ICONS;
-    const float right = barButtonX(0, n) - 30;
+    /* WiiFin brought to the GamePad (Screens: GamePad): a button back to the TV */
+    const bool toTv = !dual && PlatformWiiU::screens() == PlatformWiiU::Screens::GamePad;
+    const float right = barButtonX(0, n) - 30 - (toTv ? 58 : 0);
+    if (toTv) {
+        const float cx = barButtonX(0, n) - 58;
+        roundButton(cx, BAR_H / 2, 22, Icon::Tv, 0);
+        if (hit(touch, cx - 29, 0, 58, BAR_H + 4)) tapped = 10;
+    }
     std::string title = home ? "" : p.type == Type::Search ? std::string(tr("Search")) + ": " + p.title
                                   : p.type == Type::Detail && p.hasDetail
                                         ? (p.detail.seriesName.empty() ? p.detail.name : p.detail.seriesName)
@@ -1423,6 +1431,11 @@ bool BrowseWiiU::frame(ir_t& ir)
     if (tapped == 0 || Input::is1Pressed()) {
         searching = true;
         searchText.clear();
+        SoundFX::play(SoundFX::FX::Open);
+        return false;
+    }
+    if (tapped == 10) {   /* back to the TV (the GamePad its navigation) */
+        PlatformWiiU::setScreens(PlatformWiiU::Screens::TV);
         SoundFX::play(SoundFX::FX::Open);
         return false;
     }

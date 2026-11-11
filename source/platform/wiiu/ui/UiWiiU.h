@@ -64,7 +64,7 @@ float paragraph(float x, float y, float maxW, const std::string& s, int size, u3
 std::string ellipsize(const std::string& s, int size, float maxW);
 
 enum class Icon { Back, Search, Gear, Play, Pause, Prev, Next, Rewind, Forward, Heart, Check,
-                  Home, Person, Audio, Subtitles, Shuffle, Grid, Close, Star, Music };
+                  Home, Person, Audio, Subtitles, Shuffle, Grid, Close, Star, Music, Tv };
 void icon(Icon i, float cx, float cy, float s, u32 color);
 
 /* A rounded button with an icon and/or a label; focus 0..1 lights it */

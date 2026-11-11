@@ -322,6 +322,11 @@ void icon(Icon i, float cx, float cy, float s, u32 c)
             Ui::triangle(cx, cy, px[k], py[k], px[(k + 1) % 10], py[(k + 1) % 10], c);
         break;
     }
+    case Icon::Tv:
+        Ui::roundBorder(cx - h * 0.8f, cy - h * 0.6f, h * 1.6f, h * 1.05f, 2, lw, c);
+        bar(cx - h * 0.35f, cy + h * 0.75f, cx + h * 0.35f, cy + h * 0.75f, lw, c);
+        bar(cx, cy + h * 0.45f, cx, cy + h * 0.75f, lw, c);
+        break;
     case Icon::Music:
         Ui::circle(cx - h * 0.35f, cy + h * 0.45f, h * 0.28f, c);
         Ui::circle(cx + h * 0.45f, cy + h * 0.3f, h * 0.28f, c);
