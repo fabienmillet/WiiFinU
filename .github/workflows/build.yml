@@ -1,0 +1,67 @@
+name: Build
+
+# WiiFinU.wuhb on every push and pull request; a release when a version tag
+# (v0.1.0...) is pushed.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # the release, on a tag
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:20261102
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools the image lacks, and its mbedTLS 2.x out (WiiFin U bundles 3.6)
+        run: |
+          apt-get update -qq && apt-get install -y -qq xxd zip
+          dkp-pacman -Rdd --noconfirm wiiu-curl wiiu-mbedtls || true
+
+      # mbedTLS and FFmpeg take minutes to build: kept while their scripts
+      # and the toolchain stay the same
+      - name: Bundled libraries (cache)
+        uses: actions/cache@v4
+        with:
+          path: |
+            libs/ffmpeg-wiiu
+            libs/mbedtls/libwiiu
+          key: libswiiu-devkitppc-20261102-${{ hashFiles('tools/wiiu/setup.sh', 'tools/wiiu/build_ffmpeg.sh', 'libs/mbedtls/include/mbedtls/mbedtls_config.h') }}
+
+      - name: Requirements (portlibs, mbedTLS, FFmpeg)
+        run: tools/wiiu/setup.sh
+
+      - name: Build
+        run: make -j"$(nproc)" WERROR=-Werror
+
+      # the SD card's layout: wiiu/apps/WiiFinU.wuhb, and the font Chinese
+      # and Korean need in wiiu/apps/WiiFinU/fonts/
+      - name: Package
+        run: |
+          mkdir -p pkg/wiiu/apps/WiiFinU/fonts
+          cp WiiFinU.wuhb pkg/wiiu/apps/
+          cp data/fonts/cjk/* pkg/wiiu/apps/WiiFinU/fonts/
+          (cd pkg && zip -qr ../WiiFinU.zip wiiu)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WiiFinU
+          path: |
+            WiiFinU.zip
+            WiiFinU.wuhb
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            WiiFinU.zip
+            WiiFinU.wuhb
+          prerelease: true
+          generate_release_notes: true

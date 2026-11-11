@@ -8,11 +8,12 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DEPS="${XDG_CACHE_HOME:-$HOME/.cache}/wiifin-3ds-deps"
 : "${DEVKITPRO:=/opt/devkitpro}"
 PACMAN=$(command -v dkp-pacman || command -v pacman)
-sudo "$PACMAN" -S --noconfirm --needed wiiu-dev ppc-freetype ppc-libjpeg-turbo ppc-libpng ppc-zlib \
+SUDO=sudo; [ "$(id -u)" = 0 ] && SUDO=   # (root in a CI container)
+$SUDO "$PACMAN" -S --noconfirm --needed wiiu-dev ppc-freetype ppc-libjpeg-turbo ppc-libpng ppc-zlib \
     ppc-bzip2 ppc-pkg-config
 # wiiu-mbedtls (2.x, pulled by wiiu-curl) must not be installed: WiiFin uses its own 3.6 headers
 if "$PACMAN" -Q wiiu-mbedtls >/dev/null 2>&1; then
-    echo "remove wiiu-mbedtls first (its headers clash with libs/mbedtls): sudo $PACMAN -R wiiu-curl wiiu-mbedtls"; exit 1
+    echo "remove wiiu-mbedtls first (its headers clash with libs/mbedtls): $SUDO $PACMAN -R wiiu-curl wiiu-mbedtls"; exit 1
 fi
 
 # mbedTLS, the same version and config as the Wii's
