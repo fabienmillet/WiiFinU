@@ -1,3 +1,6 @@
+#ifdef __WIIU__
+#include "../platform/wiiu/PlatformWiiU.h"
+#endif
 #include "SettingsView.h"
 #include "Ui.h"
 #include "../player/vo_wiifin.h"
@@ -14,7 +17,7 @@
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_SCREENS };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -66,6 +69,11 @@ void SettingsView::openSection(int s) {
 #ifdef __3DS__
     /* the 3DS: no TV to fit, no disc slot, its own screens' refresh */
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
+                              R_SSL, R_QUALITY, R_DIRECT };
+#elif defined(__WIIU__)
+    /* the Wii U: its two screens; HDMI (no TV area to fit), no disc slot
+     * light, its own player (no frame blending) */
+    else if (s == 1) rows = { R_SCREENS, R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
                               R_SSL, R_QUALITY, R_DIRECT };
 #else
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
@@ -181,6 +189,11 @@ void SettingsView::activate(int index) {
         case 13:   /* the Wii's, then each language in turn */
             Lang::choose(Lang::next(Lang::choice()));
             break;
+#ifdef __WIIU__
+        case R_SCREENS:
+            PlatformWiiU::setScreens((PlatformWiiU::Screens)(((int)PlatformWiiU::screens() + 1) % 3));
+            break;
+#endif
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
             if (!profile) break;
             signInWant = (signInWant + 1) % 3;
@@ -357,6 +370,18 @@ bool SettingsView::update(ir_t& ir) {
  * 3DS gathered for its own drawing) */
 void SettingsView::describeRows() {
     const Ui::Palette& p = Ui::pal();
+#ifdef __WIIU__
+    {
+        static const char* name[3] = { N_("Auto"), N_("TV"), N_("GamePad") };
+        static const char* desc[3] = {
+            N_("On the TV when one is plugged in, the GamePad as its remote"),
+            N_("On the TV, the GamePad as its remote (L3 + R3 swaps)"),
+            N_("On the GamePad, the TV showing the same (L3 + R3 swaps)"),
+        };
+        const int v = (int)PlatformWiiU::screens();
+        drawRow(R_SCREENS, N_("Screens"), desc[v], name[v], v == 0 ? p.ok : p.accent);
+    }
+#endif
     drawRow(0, N_("SSL Verification"),
             N_("Validate the server HTTPS certificate (disable for self-signed certs)"),
             client.sslVerify ? N_("ON") : N_("OFF"), client.sslVerify ? p.ok : 0x8A9099FF);

@@ -237,6 +237,7 @@ bool touch(float& x, float& y, bool& tap, bool& dragged)
 }
 
 void inject(uint16_t bits) { s_inject |= bits; }
+uint16_t buttonOf(const char* wiiName) { return wiiName ? hintBits(wiiName) : 0; }
 
 void setRemotePointer(bool valid, float fx, float fy)
 {

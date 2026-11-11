@@ -611,9 +611,28 @@ const char* hintAt(float x, float y)
 }
 #endif
 
+#ifdef __WIIU__
+/* The hints drawn this frame and the last one's: the GamePad's remote
+ * control offers them as buttons while WiiFin is on the TV */
+static std::vector<Hint> s_frameHints, s_shownHints;
+void endFrameHints()
+{
+    s_shownHints.swap(s_frameHints);
+    s_frameHints.clear();
+}
+const std::vector<Hint>& hintsShown() { return s_shownHints; }
+#endif
+
 float hint(float x, float y, const Hint& h)
 {
     const Palette& p = pal();
+#ifdef __WIIU__
+    {
+        bool known = false;
+        for (const Hint& k : s_frameHints) known = known || strcmp(k.button, h.button) == 0;
+        if (!known && s_frameHints.size() < 12) s_frameHints.push_back(h);
+    }
+#endif
     const char* b = buttonName(h.button);
     float cy = y + 9, w = glyphWidth(b);
 #if defined(__3DS__) || defined(__WIIU__)

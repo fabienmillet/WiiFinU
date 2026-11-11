@@ -1995,3 +1995,41 @@ msgstr "下午"
 #: source/ui/Ui.cpp:946
 msgid "Message"
 msgstr "訊息"
+
+# Wii U (source/platform/wiiu, the Screens setting)
+
+msgid "Remote control"
+msgstr "遙控器"
+
+msgid "Show on the GamePad"
+msgstr "在 GamePad 上顯示"
+
+msgid "Touch pad"
+msgstr "觸控板"
+
+msgid "Slide to move the pointer on the TV"
+msgstr "滑動以移動電視上的指標"
+
+msgid "Tap to choose"
+msgstr "輕觸以選擇"
+
+msgid "Now playing"
+msgstr "正在播放"
+
+msgid "Screens"
+msgstr "螢幕"
+
+msgid "TV"
+msgstr "電視"
+
+msgid "GamePad"
+msgstr "GamePad"
+
+msgid "On the TV when one is plugged in, the GamePad as its remote"
+msgstr "接上電視時顯示在電視上，GamePad 作為遙控器"
+
+msgid "On the TV, the GamePad as its remote (L3 + R3 swaps)"
+msgstr "顯示在電視上，GamePad 作為遙控器（L3 + R3 切換）"
+
+msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
+msgstr "顯示在 GamePad 上，電視顯示相同畫面（L3 + R3 切換）"

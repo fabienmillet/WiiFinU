@@ -1996,3 +1996,41 @@ msgstr "오후"
 #: source/ui/Ui.cpp:946
 msgid "Message"
 msgstr "메시지"
+
+# Wii U (source/platform/wiiu, the Screens setting)
+
+msgid "Remote control"
+msgstr "리모컨"
+
+msgid "Show on the GamePad"
+msgstr "GamePad에 표시"
+
+msgid "Touch pad"
+msgstr "터치패드"
+
+msgid "Slide to move the pointer on the TV"
+msgstr "밀어서 TV의 포인터 이동"
+
+msgid "Tap to choose"
+msgstr "탭하여 선택"
+
+msgid "Now playing"
+msgstr "재생 중"
+
+msgid "Screens"
+msgstr "화면"
+
+msgid "TV"
+msgstr "TV"
+
+msgid "GamePad"
+msgstr "GamePad"
+
+msgid "On the TV when one is plugged in, the GamePad as its remote"
+msgstr "TV가 연결되어 있으면 TV에, GamePad는 리모컨"
+
+msgid "On the TV, the GamePad as its remote (L3 + R3 swaps)"
+msgstr "TV에 표시, GamePad는 리모컨 (L3 + R3로 전환)"
+
+msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
+msgstr "GamePad에 표시, TV도 같은 화면 (L3 + R3로 전환)"

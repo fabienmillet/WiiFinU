@@ -1996,3 +1996,41 @@ msgstr ""
 #: source/ui/Ui.cpp:946
 msgid "Message"
 msgstr ""
+
+# Wii U (source/platform/wiiu, the Screens setting)
+
+msgid "Remote control"
+msgstr ""
+
+msgid "Show on the GamePad"
+msgstr ""
+
+msgid "Touch pad"
+msgstr ""
+
+msgid "Slide to move the pointer on the TV"
+msgstr ""
+
+msgid "Tap to choose"
+msgstr ""
+
+msgid "Now playing"
+msgstr ""
+
+msgid "Screens"
+msgstr ""
+
+msgid "TV"
+msgstr ""
+
+msgid "GamePad"
+msgstr ""
+
+msgid "On the TV when one is plugged in, the GamePad as its remote"
+msgstr ""
+
+msgid "On the TV, the GamePad as its remote (L3 + R3 swaps)"
+msgstr ""
+
+msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
+msgstr ""

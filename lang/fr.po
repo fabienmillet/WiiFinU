@@ -2133,3 +2133,41 @@ msgstr "L'adresse de votre serveur Jellyfin, votre nom d'utilisateur et votre mo
 
 msgid "in another Jellyfin app signed in to this server:"
 msgstr "dans une autre appli Jellyfin connectée à ce serveur :"
+
+# Wii U (source/platform/wiiu, the Screens setting)
+
+msgid "Remote control"
+msgstr "Télécommande"
+
+msgid "Show on the GamePad"
+msgstr "Afficher sur le GamePad"
+
+msgid "Touch pad"
+msgstr "Pavé tactile"
+
+msgid "Slide to move the pointer on the TV"
+msgstr "Glissez pour déplacer le pointeur sur la TV"
+
+msgid "Tap to choose"
+msgstr "Touchez pour choisir"
+
+msgid "Now playing"
+msgstr "En cours de lecture"
+
+msgid "Screens"
+msgstr "Écrans"
+
+msgid "TV"
+msgstr "TV"
+
+msgid "GamePad"
+msgstr "GamePad"
+
+msgid "On the TV when one is plugged in, the GamePad as its remote"
+msgstr "Sur la TV si elle est branchée, le GamePad en télécommande"
+
+msgid "On the TV, the GamePad as its remote (L3 + R3 swaps)"
+msgstr "Sur la TV, le GamePad en télécommande (L3 + R3 pour échanger)"
+
+msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
+msgstr "Sur le GamePad, la TV montre la même chose (L3 + R3 pour échanger)"

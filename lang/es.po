@@ -1996,3 +1996,41 @@ msgstr "PM"
 #: source/ui/Ui.cpp:946
 msgid "Message"
 msgstr "Mensaje"
+
+# Wii U (source/platform/wiiu, the Screens setting)
+
+msgid "Remote control"
+msgstr "Mando a distancia"
+
+msgid "Show on the GamePad"
+msgstr "Mostrar en el GamePad"
+
+msgid "Touch pad"
+msgstr "Panel táctil"
+
+msgid "Slide to move the pointer on the TV"
+msgstr "Desliza para mover el puntero en la TV"
+
+msgid "Tap to choose"
+msgstr "Toca para elegir"
+
+msgid "Now playing"
+msgstr "Reproduciendo"
+
+msgid "Screens"
+msgstr "Pantallas"
+
+msgid "TV"
+msgstr "TV"
+
+msgid "GamePad"
+msgstr "GamePad"
+
+msgid "On the TV when one is plugged in, the GamePad as its remote"
+msgstr "En la TV si hay una conectada, el GamePad como mando"
+
+msgid "On the TV, the GamePad as its remote (L3 + R3 swaps)"
+msgstr "En la TV, el GamePad como mando (L3 + R3 los intercambia)"
+
+msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
+msgstr "En el GamePad, la TV muestra lo mismo (L3 + R3 los intercambia)"

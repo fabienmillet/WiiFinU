@@ -1,4 +1,7 @@
 /* Video playback session: the player, its menus and everything chained from it. */
+#ifdef __WIIU__
+#include "../platform/wiiu/PlatformWiiU.h"
+#endif
 #include "AppInternal.h"
 #include "Input.h"
 #include "MusicBGM.h"
@@ -259,6 +262,9 @@ bool runPlaySession(JellyfinClient& client,
 
         PlayerViewContext ctx;
         ctx.title        = title;
+#ifdef __WIIU__
+        PlatformWiiU::setNowPlaying(title.c_str(), nullptr);   /* the GamePad's remote */
+#endif
         ctx.episodes     = episodes;
         ctx.episodeIdx   = episodeIdx;
         ctx.audioStreams = audioStreams;

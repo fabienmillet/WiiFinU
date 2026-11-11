@@ -3,12 +3,13 @@
  * remote control while WiiFin is on the TV (see PlatformWiiU.h).
  *
  * The remote (an 854x480 space, the GamePad's pixels): on the right the
- * arrows and A in their middle, B, L / R (the pages) and + (WiiFin's
+ * arrows and A in their middle, L, B, R (the pages) and + (WiiFin's
  * menu) under them; on the left a touch pad that moves a pointer on the
  * TV (a tap: A there), or, while a video plays, its progress (a tap
- * there seeks) and big buttons to go back, pause, go on.  At the bottom:
- * WiiFin brought to the GamePad.  The GamePad's own buttons work as
- * anywhere.
+ * there seeks) and big buttons to go back, pause, go on.  At the bottom,
+ * the buttons the TV's screen offers (its hints: "A Open", "Y Search"...)
+ * to tap.  At the top: WiiFin brought to the GamePad.  The GamePad's own
+ * buttons work as anywhere.
  * ----------------------------------------------------------------------- */
 #include "PlatformWiiU.h"
 #include "GfxWiiU.h"
@@ -41,7 +42,7 @@ uint64_t nowMs() { return (uint64_t)OSTicksToMilliseconds(OSGetSystemTime()); }
 /* ---- the remote's controls ---------------------------------------------- */
 
 enum Ctl { C_NONE, C_UP, C_DOWN, C_LEFT, C_RIGHT, C_A, C_B, C_L, C_R, C_MENU, C_PAD,
-           C_BACK10, C_PLAY, C_FWD30, C_BAR, C_HERE, C_COUNT };
+           C_BACK10, C_PLAY, C_FWD30, C_BAR, C_HERE, C_HINT0, C_COUNT = C_HINT0 + 8 };
 
 struct Rect { float x, y, w, h; };
 bool inside(const Rect& r, float x, float y) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
@@ -53,18 +54,47 @@ const Rect R_DOWN  = { DX - DS / 2, DY + DS * 0.5f + 6, DS, DS };
 const Rect R_LEFT  = { DX - DS * 1.5f - 6, DY - DS / 2, DS, DS };
 const Rect R_RIGHT = { DX + DS * 0.5f + 6, DY - DS / 2, DS, DS };
 const Rect R_A     = { DX - DS / 2, DY - DS / 2, DS, DS };
-const Rect R_L     = { 566, 344, 72, 52 };
-const Rect R_B     = { 650, 344, 80, 52 };
-const Rect R_R     = { 742, 344, 72, 52 };
+const Rect R_L     = { 566, 342, 56, 52 };
+const Rect R_B     = { 630, 342, 56, 52 };
+const Rect R_R     = { 694, 342, 56, 52 };
+const Rect R_MENU  = { 758, 342, 56, 52 };
 /* the left side */
 const Rect R_PAD   = { 24, 72, 500, 330 };
 const Rect R_BAR   = { 44, 204, 460, 40 };
 const Rect R_BACK10 = { 44, 290, 140, 92 };
 const Rect R_PLAY  = { 204, 290, 140, 92 };
 const Rect R_FWD30 = { 364, 290, 140, 92 };
-/* the bottom */
-const Rect R_HERE  = { 24, 420, 300, 44 };
-const Rect R_MENU  = { 566, 420, 248, 44 };
+/* the top: WiiFin to the GamePad */
+const Rect R_HERE  = { 452, 14, 260, 40 };
+/* the bottom: the TV screen's buttons */
+const float HINT_Y = 418, HINT_H = 48, HINT_X0 = 24, HINT_X1 = 830;
+
+/* the TV screen's hints as buttons: a button's Wii name, its label */
+struct HintKey { const char* button; const char* label; };
+HintKey s_hints[8];
+int     s_nHints = 0;
+
+void gatherHints()
+{
+    s_nHints = 0;
+    for (const Ui::Hint& h : Ui::hintsShown()) {
+        if (s_nHints >= 8) break;
+        if (!h.button || !h.button[0] || strcmp(h.button, "UD") == 0 || strcmp(h.button, "LR") == 0) continue;
+        if (strcmp(h.button, "-/+") == 0) {
+            s_hints[s_nHints++] = { "-", h.label };
+            if (s_nHints < 8) s_hints[s_nHints++] = { "+", h.label };
+            continue;
+        }
+        if (!InputWiiU::buttonOf(h.button)) continue;
+        s_hints[s_nHints++] = { h.button, h.label };
+    }
+}
+
+Rect hintRect(int i)
+{
+    const float gap = 10, w = (HINT_X1 - HINT_X0 - gap * (s_nHints - 1)) / (s_nHints > 0 ? s_nHints : 1);
+    return { HINT_X0 + i * (w + gap), HINT_Y, w, HINT_H };
+}
 
 Ctl     s_held = C_NONE;          /* touched, since the touch began on it */
 uint64_t s_heldSince = 0, s_lastRepeat = 0;
@@ -89,6 +119,8 @@ Ctl ctlAt(float x, float y)
     if (inside(R_R, x, y)) return C_R;
     if (inside(R_HERE, x, y)) return C_HERE;
     if (inside(R_MENU, x, y)) return C_MENU;
+    for (int i = 0; i < s_nHints; ++i)
+        if (inside(hintRect(i), x, y)) return (Ctl)(C_HINT0 + i);
     if (playing()) {
         if (inside({ R_BAR.x, R_BAR.y - 16, R_BAR.w, R_BAR.h + 32 }, x, y)) return C_BAR;
         if (inside(R_BACK10, x, y)) return C_BACK10;
@@ -118,6 +150,10 @@ uint16_t padBits(Ctl c)
 
 void act(Ctl c)
 {
+    if (c >= C_HINT0 && c < C_HINT0 + s_nHints) {
+        InputWiiU::inject(InputWiiU::buttonOf(s_hints[c - C_HINT0].button));
+        return;
+    }
     if (uint16_t b = padBits(c)) {
         InputWiiU::inject(b);
         /* the arrows lead: the pointer goes away */
@@ -267,9 +303,30 @@ void drawPad()
     if (np && *np) Ui::textCentered(cx, R_PAD.y + R_PAD.h - 34, np, 14, p.textDim);
 }
 
+/* a hint as a button: its button's name (the Wii U's) and its label */
+void hintKey(int i)
+{
+    const Rect r = hintRect(i);
+    const Ctl c = (Ctl)(C_HINT0 + i);
+    key(r, c, "", 0);
+    const Ui::Palette& p = Ui::pal();
+    const bool on = s_held == c;
+    const char* b = Ui::buttonName(s_hints[i].button);
+    const std::string label = tr(s_hints[i].label);
+    const int bs = 16, ls = 15;
+    const float bw = Ui::textWidth(b, bs) + 16, lw = Ui::textWidth(label.c_str(), ls);
+    float x = r.x + (r.w - bw - 8 - lw) / 2;
+    if (x < r.x + 6) x = r.x + 6;
+    const float cy = r.y + r.h / 2;
+    Ui::roundRect(x, cy - 13, bw, 26, 13, on ? p.accentDark : p.field);
+    Ui::textCentered(x + bw / 2, cy - 10, b, bs, on ? p.textOnAccent : p.text);
+    Ui::text(x + bw + 8, cy - 9, label.c_str(), ls, on ? p.textOnAccent : p.textDim);
+}
+
 /* the GamePad while WiiFin is on the TV */
 void drawRemote()
 {
+    gatherHints();
     handleTouch();
     const Ui::Palette& p = Ui::pal();
     /* the background, the whole 854x480 */
@@ -288,7 +345,7 @@ void drawRemote()
                      lt.tm_hour < 12 ? "AM" : "PM");
         else
             snprintf(clock, sizeof(clock), "%02d:%02d", lt.tm_hour, lt.tm_min);
-        Ui::textRight(830, 18, clock, 24, p.text);
+        Ui::textRight(830, 20, clock, 22, p.text);
     }
     if (playing()) drawPlaying();
     else drawPad();
@@ -300,8 +357,9 @@ void drawRemote()
     key(R_L, C_L, "L", 20);
     key(R_B, C_B, "B", 22);
     key(R_R, C_R, "R", 20);
-    key(R_HERE, C_HERE, tr("Show on the GamePad"), 16);
-    key(R_MENU, C_MENU, tr("WiiFin Menu"), 16);
+    key(R_MENU, C_MENU, "+", 24);
+    key(R_HERE, C_HERE, tr("Show on the GamePad"), 15);
+    for (int i = 0; i < s_nHints; ++i) hintKey(i);
 }
 
 /* ---- the screens --------------------------------------------------------------- */
@@ -333,6 +391,7 @@ void applyScreens()
 void (*s_prevBeforeRender)() = nullptr;
 void beforeRender()
 {
+    Ui::endFrameHints();
     if (InputWiiU::swapScreensAsked()) {
         static uint32_t s_swapScan = 0;
         if (InputWiiU::scans() != s_swapScan) {

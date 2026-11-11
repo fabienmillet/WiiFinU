@@ -37,6 +37,9 @@ bool touch(float& x, float& y, bool& tap, bool& dragged);
 /* From the remote control: GameCube buttons pressed once (libogc PAD_*),
  * and a pointer on the TV moved by the touch pad */
 void inject(uint16_t padBits);
+/* the GameCube bits of a hint's button (its Wii name: "A", "1", "-", "+!",
+ * "HOME"...), 0 none */
+uint16_t buttonOf(const char* wiiName);
 void setRemotePointer(bool valid, float frameX, float frameY);
 
 /* Something was pressed or touched lately (ms, gettime's) */
