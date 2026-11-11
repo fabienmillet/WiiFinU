@@ -11,6 +11,8 @@
 #   DRAGS="12:100,200:300,200"  a finger slid from one point to the other
 #   CFG=file              put a wiifin.cfg on the card first (a profile)
 #   APP=WiiFin.rpx        run that instead of WiiFin.wuhb
+#   AUDIO=1               with sound (Cubeb) into a silent PipeWire sink
+#                         "wiifin_test" (made if missing), recorded into out/audio.wav
 #
 # Cemu's sound is off (without an audio device it waits forever), its GPU
 # is Vulkan (llvmpipe here).  Kill a run with: pkill -x cemu
@@ -42,7 +44,9 @@ import re, sys
 p = sys.argv[1]
 s = open(p).read()
 s = re.sub(r'(<Graphic>\s*<api>)\d(</api>)', r'\g<1>1\2', s)
-s = re.sub(r'<TVDevice>[^<]*</TVDevice>', '<TVDevice></TVDevice>', s)
+audio = __import__('os').environ.get('AUDIO')
+s = re.sub(r'(<Audio>\s*<api>)\d(</api>)', r'\g<1>3\2', s)   # Cubeb (0 is DirectSound)
+s = re.sub(r'<TVDevice>[^<]*</TVDevice>', '<TVDevice>default</TVDevice>' if audio else '<TVDevice></TVDevice>', s)
 s = re.sub(r'<logflag>\d+</logflag>', '<logflag>' + str(131077 + (512 if __import__('os').environ.get('H264LOG') else 0)) + '</logflag>', s)   # files, unsupported calls, OSReport (+ H.264)
 s = re.sub(r'<check_update>true</check_update>', '<check_update>false</check_update>', s)
 s = re.sub(r'<open_pad>false</open_pad>', '<open_pad>true</open_pad>', s)
@@ -65,7 +69,14 @@ pkill -x cemu 2>/dev/null; sleep 1
 mkdir -p "$HOME/.cache/wiiu-test"
 cp "$APP" "$HOME/.cache/wiiu-test/"
 RUN="$HOME/.cache/wiiu-test/$(basename "$APP")"
-flatpak run --nosocket=wayland --socket=x11 info.cemu.Cemu ${CEMU_ARGS:-} -g "$RUN" > "$OUT/cemu.out" 2>&1 &
+if [ -n "${AUDIO:-}" ]; then
+    pactl list short sinks | grep -q wiifin_test ||
+        pactl load-module module-null-sink sink_name=wiifin_test sink_properties=device.description=WiiFinTest >/dev/null
+    PULSE=--env=PULSE_SINK=wiifin_test
+    parecord -d wiifin_test.monitor --rate=48000 --channels=2 --format=s16le --file-format=wav "$OUT/audio.wav" >/dev/null 2>&1 &
+    REC=$!
+fi
+flatpak run --nosocket=wayland --socket=x11 ${PULSE:-} info.cemu.Cemu ${CEMU_ARGS:-} -g "$RUN" > "$OUT/cemu.out" 2>&1 &
 START=$(date +%s.%N)
 
 win() { xdotool search --name "$1" 2>/dev/null | head -1; }
@@ -117,6 +128,7 @@ while read -r at what arg; do
 done <<< "$ACTIONS"
 
 pkill -x cemu 2>/dev/null
+[ -n "${REC:-}" ] && kill $REC 2>/dev/null
 sleep 1
 cp "$CEMU_DATA/log.txt" "$OUT/cemu-log.txt" 2>/dev/null
 # WiiFin's log: Cemu writes the card's files when they are closed (never,

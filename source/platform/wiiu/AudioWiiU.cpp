@@ -39,8 +39,10 @@ struct Voice {
     const uint8_t* data = nullptr;
     int      frames = 0;             /* samples per channel */
     bool     stereo = false, bits16 = true, loop = false, paused = false;
-    uint32_t pos = 0;                /* 16.16 frames */
-    uint32_t step = 0;               /* 16.16, the voice's rate / 48 kHz */
+    uint64_t pos = 0;                /* 16.16 frames (64 bits: a 32-bit one wrapped
+                                        after 65536 frames, 1.4 s, and the sound
+                                        played again from its start, forever) */
+    uint64_t step = 0;               /* 16.16, the voice's rate / 48 kHz */
     int      volL = 255, volR = 255;
     bool     on = false;
 };
@@ -101,7 +103,7 @@ void mix(void*, Uint8* out8, int len)
                 int idx = (int)(v.pos >> 16);
                 if (idx >= v.frames) {
                     if (!v.loop) { v.on = false; break; }
-                    v.pos -= (uint32_t)v.frames << 16;
+                    v.pos -= (uint64_t)v.frames << 16;
                     idx = (int)(v.pos >> 16);
                 }
                 acc[i * 2]     += voiceSample(v, idx, 0) * v.volL / 255;
@@ -413,7 +415,7 @@ static s32 setVoice(s32 voice, s32 format, s32 pitch, void* snd, s32 size, s32 v
     v.loop = loop;
     v.paused = false;
     v.pos = 0;
-    v.step = (uint32_t)(((uint64_t)pitch << 16) / AudioWiiU::RATE);
+    v.step = ((uint64_t)pitch << 16) / AudioWiiU::RATE;
     v.volL = vl; v.volR = vr;
     v.on = true;
     return SND_OK;
