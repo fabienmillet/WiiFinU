@@ -646,7 +646,11 @@ void PlayerView::render(const ir_t& ir)
 #ifdef __3DS__
             const Ui::Hint all[] = { { "SELECT", N_("Zoom") },
 #else
+#ifdef __WIIU__
+            const Ui::Hint all[] = { { "ZR", N_("Zoom") },   /* (the GamePad's) */
+#else
             const Ui::Hint all[] = { { bs == Ui::ButtonStyle::GameCube ? "Z" : "ZR", N_("Zoom") },
+#endif
 #endif
                                      { "1", N_("Audio") }, { "2", N_("Subtitles") }, { "B", N_("Back") } };
             const Ui::Hint* hints = bs == Ui::ButtonStyle::WiiRemote ? all + 1 : all;

@@ -99,7 +99,7 @@ uint16_t hintBits(const char* b)
 {
     static const struct { const char* wii; uint16_t bits; } MAP[] = {
         { "A", ogc::P_A }, { "B", ogc::P_B }, { "1", ogc::P_Y }, { "2", ogc::P_X },
-        { "-", ogc::P_L }, { "+", ogc::P_R }, { "HOME", ogc::P_START }, { "+!", ogc::P_Z },
+        { "-", ogc::P_L }, { "+", ogc::P_R }, { "HOME", ogc::P_START }, { "+!", ogc::P_Z }, { "ZR", ogc::P_Z },
     };
     for (const auto& m : MAP)
         if (strcmp(b, m.wii) == 0) return m.bits;
