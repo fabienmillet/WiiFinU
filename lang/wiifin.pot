@@ -2092,3 +2092,8 @@ msgstr ""
 
 msgid "Back to the Wii U Menu?"
 msgstr ""
+
+#: source/core/PlaySession.cpp:808
+#, c-format
+msgid "Details are in %s on the SD card."
+msgstr ""

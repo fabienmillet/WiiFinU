@@ -1,43 +1,42 @@
 #---------------------------------------------------------------------------------
-# devkitPro/devkitPPC environment
+# WiiFin U: WiiFin for the Wii U (devkitPPC, wut), an Aroma app.
+#
+#   make                             -> WiiFinU.wuhb (and WiiFinU.rpx)
+#
+# WiiFin's shared sources (from upstream, fabienmillet/WiiFin) are built as
+# they are, against source/platform/wiiu: compat/ gives them libogc's and
+# GRRLIB's headers, the other files there implement them on the Wii U (see
+# source/platform/wiiu/README.md).
+# Requirements: tools/wiiu/setup.sh (FFmpeg into libs/ffmpeg-wiiu, mbedTLS
+# into libs/mbedtls/libwiiu).
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
-ifeq ($(strip $(DEVKITPPC)),)
-$(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
-endif
-
-include $(DEVKITPPC)/wii_rules
-
+DEVKITPRO   ?= /opt/devkitpro
+DEVKITPPC   ?= $(DEVKITPRO)/devkitPPC
+WUT_ROOT    := $(DEVKITPRO)/wut
+PORTLIBS    := $(DEVKITPRO)/portlibs
 PREFIX      := $(DEVKITPPC)/bin/powerpc-eabi-
 CC          := $(PREFIX)gcc
 CXX         := $(PREFIX)g++
-LD          := $(CXX)
-OBJCOPY     := $(PREFIX)objcopy
-PKG_CONFIG  := PKG_CONFIG_LIBDIR=/opt/devkitpro/portlibs/ppc/lib/pkgconfig pkg-config
+TOOLS       := $(DEVKITPRO)/tools/bin
 
-#---------------------------------------------------------------------------------
-# Project structure
-#---------------------------------------------------------------------------------
-TARGET      := WiiFin
+TARGET      := WiiFinU
 BUILD       := build
-SOURCES     := source source/core source/input source/ui source/jellyfin source/player
-ASSETS      := data textures
-INCLUDES    := $(SOURCES) $(BUILD)
+APP_NAME    ?= WiiFin U
+APP_SHORT   ?= WiiFin U
+APP_AUTHOR  := Fabien MILLET
 
-#---------------------------------------------------------------------------------
-# Source files and assets
-#---------------------------------------------------------------------------------
+PWU         := source/platform/wiiu
+SOURCES     := source source/core source/input source/ui source/jellyfin source/player $(PWU) $(PWU)/ui
+
 CPPFILES    := $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
 CFILES      := $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
 
 SRC_OFILES  := $(addprefix $(BUILD)/,$(notdir $(CPPFILES:.cpp=.o)) $(notdir $(CFILES:.c=.o)))
 DEPFILES    := $(SRC_OFILES:.o=.d)
 
-# Object files for assets (generated manually)
 ASSET_OFILES := \
-	$(BUILD)/crt0_pre.o \
-	$(BUILD)/stub_zone.o \
 	$(BUILD)/wii_font_ttf.o \
 	$(BUILD)/jp_font_ttf.o \
 	$(BUILD)/button_start_png.o \
@@ -60,178 +59,94 @@ ASSET_OFILES := \
 
 OFILES      := $(ASSET_OFILES) $(SRC_OFILES)
 
-#---------------------------------------------------------------------------------
-# Flags
-#---------------------------------------------------------------------------------
-INCLUDE := $(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
-           -I$(LIBOGC_INC) -I$(BUILD) \
-           -I/opt/devkitpro/portlibs/ppc/include \
-           -I/opt/devkitpro/portlibs/ppc/include/freetype2 \
-           -I/opt/devkitpro/portlibs/wii/include \
-           -I$(CURDIR)/libs/mbedtls/include
+MACHDEP     := -DESPRESSO -mcpu=750 -meabi -mhard-float
+INCLUDE     := -I$(CURDIR)/$(PWU)/compat \
+               $(foreach dir,$(SOURCES),-I$(CURDIR)/$(dir)) -I$(CURDIR)/$(BUILD) \
+               -I$(CURDIR)/libs/mbedtls/include -I$(CURDIR)/libs/ffmpeg-wiiu/include \
+               -I$(PORTLIBS)/wiiu/include -I$(PORTLIBS)/ppc/include -I$(PORTLIBS)/ppc/include/freetype2 \
+               -I$(PORTLIBS)/ppc/include/libpng16 -I$(WUT_ROOT)/include
 
-# WERROR=-Werror (set by the CI) turns warnings into errors
 WERROR      ?=
-CFLAGS      := -g -O2 -Wall $(WERROR) -MMD -MP $(MACHDEP) $(INCLUDE)
-CXXFLAGS    := $(CFLAGS)
-LDFLAGS     := -g $(MACHDEP) -Wl,-Map,$(TARGET).map -T $(CURDIR)/tools/wii_wiifin.ld \
-               -Wl,--wrap=LWP_JoinThread \
-               -Wl,--wrap=SYS_Report \
-               -Wl,--wrap=CONF_GetIdleLedMode \
-               -Wl,--wrap=GRRLIB_Render -Wl,--wrap=iosFree   # see source/core/LwpJoinFix.cpp, Log.cpp, WiiPlayer.cpp, RenderHook.cpp, player/OgcCompat.c
-LIBPATHS    := -L$(LIBOGC_LIB) -L/opt/devkitpro/portlibs/wii/lib -L/opt/devkitpro/portlibs/ppc/lib \
-               -L$(CURDIR)/libs/mbedtls/lib
+# -fno-if-conversion: no conditional traps (tweq, from libstdc++'s checks
+# such as shared_ptr's count overflow): Cemu's recompiler loops forever on
+# them (WiiFin froze on sign-in there); the console runs either
+CFLAGS      := -g -O2 -fno-if-conversion -fno-if-conversion2 -Wall $(WERROR) -MMD -MP -ffunction-sections -fdata-sections \
+               $(MACHDEP) -D__WIIU__ -D__WUT__ -DAPP_NAME='"$(APP_NAME)"' $(INCLUDE)
+CXXFLAGS    := $(CFLAGS) -fno-rtti -std=gnu++17
+LDFLAGS     := -specs=$(WUT_ROOT)/share/wut.specs -g $(MACHDEP) -Wl,-Map,$(TARGET).map -Wl,--gc-sections \
+               -Wl,--wrap=SYS_Report -Wl,--wrap=GRRLIB_Render
+LIBS        := -L$(CURDIR)/libs/ffmpeg-wiiu/lib -lavformat -lavcodec -lswscale -lswresample -lavutil \
+               -L$(CURDIR)/libs/mbedtls/libwiiu -lmbedtls -lmbedx509 -lmbedcrypto \
+               -L$(PORTLIBS)/wiiu/lib -lSDL2 \
+               -L$(PORTLIBS)/ppc/lib -lfreetype -lpng16 -lbrotlidec -lbrotlicommon -lbz2 -ljpeg -lmad -lz \
+               -L$(WUT_ROOT)/lib -lwut -lm
 
-LIBS        := -lgrrlib -lpngu `$(PKG_CONFIG) freetype2 libpng libjpeg --libs` -lbrotlidec -lbrotlicommon -lwiikeyboard -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm -lz \
-               -lmbedtls -lmbedx509 -lmbedcrypto
+.PHONY: all clean
 
-# Link against mplayer-ce when available (see MPLAYER_CE_BUILD.md)
-ifneq ($(wildcard $(CURDIR)/libs/mplayer-ce-build/libmplayer.a),)
-LIBPATHS    += -L$(CURDIR)/libs/mplayer-ce-build
-LIBS        := -Wl,--start-group -lmplayer -lfribidi -laesnd -ltinysmb -ldi -liso9660 -Wl,--end-group $(LIBS)
-endif
-
-#---------------------------------------------------------------------------------
-# Rules
-#---------------------------------------------------------------------------------
-.PHONY: all clean run
-
-all: $(BUILD) $(TARGET).dol
+all: $(BUILD) $(TARGET).wuhb
 
 $(BUILD):
 	mkdir -p $@
 
-$(TARGET).dol: $(TARGET).elf
-	elf2dol $< $@
+$(TARGET).wuhb: $(TARGET).rpx $(PWU)/meta/icon.png $(PWU)/meta/splash_tv.png $(PWU)/meta/splash_drc.png
+	$(TOOLS)/wuhbtool $< $@ --name "$(APP_NAME)" --short-name "$(APP_SHORT)" --author "$(APP_AUTHOR)" \
+		--icon=$(PWU)/meta/icon.png --tv-image=$(PWU)/meta/splash_tv.png --drc-image=$(PWU)/meta/splash_drc.png
+	@echo built ... $@
+
+# no conditional trap may be left (see CFLAGS): `trap` and `twu` (always
+# taken: a bug, abort) are the only ones allowed
+$(TARGET).rpx: $(TARGET).elf
+	@T=$$($(PREFIX)objdump -d --no-show-raw-insn $< | grep -P '\ttw(?!u )[a-z]*i? ' | head -5); \
+	if [ -n "$$T" ]; then echo "conditional traps (Cemu loops on them):"; echo "$$T"; exit 1; fi
+	$(TOOLS)/elf2rpl $< $@
+
 $(TARGET).elf: $(OFILES)
-	$(LD) $^ -o $@ $(LDFLAGS) $(LIBPATHS) $(LIBS)
-
-# Compilation C/C++
-$(BUILD)/%.o: source/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/core/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/input/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/ui/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/jellyfin/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/player/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: source/player/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Explicit asset rules
-$(BUILD)/cursor_pointer_png.o: data/cursors/PointerP1-64.png
-	xxd -i $< > $(BUILD)/cursor_pointer_png.h
-	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cursor_pointer_png.h
-
-$(BUILD)/cursor_hand_open_png.o: data/cursors/HandOpenP1-64.png
-	xxd -i $< > $(BUILD)/cursor_hand_open_png.h
-	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cursor_hand_open_png.h
-
-$(BUILD)/cursor_hand_closed_png.o: data/cursors/HandClosedP1-64.png
-	xxd -i $< > $(BUILD)/cursor_hand_closed_png.h
-	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cursor_hand_closed_png.h
-
-$(BUILD)/button_start_png.o: data/images/button_start.png
-	xxd -i -n data_button_start_png $< > $(BUILD)/button_start_png.h
-	$(CC) -x c -c -o $@ $(BUILD)/button_start_png.h
-
-$(BUILD)/logo_wiifin_png.o: data/images/logo_wiifin.png
-	xxd -i -n data_logo_wiifin_png $< > $(BUILD)/logo_wiifin_png.h
-	$(CC) -x c -c -o $@ $(BUILD)/logo_wiifin_png.h
-
-# The interface's translations (lang/*.po), see source/core/Lang.cpp
-LANG_PO := $(sort $(wildcard lang/*.po))
-$(BUILD)/lang_mo.o: $(LANG_PO) tools/lang_table.sh
-	bash tools/lang_table.sh $(BUILD) $(LANG_PO) > $(BUILD)/lang_mo.c
-	$(CC) -c -o $@ $(BUILD)/lang_mo.c
-
-$(BUILD)/wii_font_ttf.o: data/fonts/wii_font.ttf
-	xxd -i -n data_wii_font_ttf $< > $(BUILD)/wii_font_ttf.h
-	$(CC) -x c -c -o $@ $(BUILD)/wii_font_ttf.h
-
-$(BUILD)/jp_font_ttf.o: data/fonts/jp_font.ttf
-	xxd -i -n data_jp_font_ttf $< > $(BUILD)/jp_font_ttf.h
-	$(CC) -x c -c -o $@ $(BUILD)/jp_font_ttf.h
-
-$(BUILD)/ring_png.o: data/images/ring.png
-	xxd -i -n data_ring_png $< > $(BUILD)/ring_png.h
-	$(CC) -x c -c -o $@ $(BUILD)/ring_png.h
-
-$(BUILD)/cacert_pem.o: data/certs/cacert.pem
-	(cat $<; printf '\0') > $(BUILD)/cacert_pem_null.pem
-	xxd -i $(BUILD)/cacert_pem_null.pem > $(BUILD)/cacert_pem.h
-	sed -i 's/build_cacert_pem_null_pem/data_cacert_pem/g' $(BUILD)/cacert_pem.h
-	$(CC) -x c -c -o $@ -I$(BUILD) $(BUILD)/cacert_pem.h
-
-$(BUILD)/music_mp3.o: data/sounds/bgm.mp3
-	xxd -i -n data_music_mp3 $< > $(BUILD)/music_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/music_mp3.h
-
-# FX sound effects — use xxd -n to give clean variable names
-$(BUILD)/fx_start_mp3.o: data/sounds/start.mp3
-	xxd -i -n data_sounds_start_mp3 $< > $(BUILD)/fx_start_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_start_mp3.h
-
-$(BUILD)/fx_select_mp3.o: data/sounds/select.mp3
-	xxd -i -n data_sounds_select_mp3 $< > $(BUILD)/fx_select_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_select_mp3.h
-
-$(BUILD)/fx_back_mp3.o: data/sounds/back.mp3
-	xxd -i -n data_sounds_back_mp3 $< > $(BUILD)/fx_back_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_back_mp3.h
-
-$(BUILD)/fx_backspace_mp3.o: data/sounds/backspace.mp3
-	xxd -i -n data_sounds_backspace_mp3 $< > $(BUILD)/fx_backspace_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_backspace_mp3.h
-
-$(BUILD)/fx_loading_mp3.o: data/sounds/loading.mp3
-	xxd -i -n data_sounds_loading_mp3 $< > $(BUILD)/fx_loading_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_loading_mp3.h
-
-$(BUILD)/fx_press_key_mp3.o: data/sounds/press_key.mp3
-	xxd -i -n data_sounds_press_key_mp3 $< > $(BUILD)/fx_press_key_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_press_key_mp3.h
-
-$(BUILD)/fx_menu_exit_mp3.o: data/sounds/menu_exit.mp3
-	xxd -i -n data_sounds_menu_exit_mp3 $< > $(BUILD)/fx_menu_exit_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_menu_exit_mp3.h
-
-$(BUILD)/fx_menu_enter_mp3.o: data/sounds/menu_enter.mp3
-	xxd -i -n data_sounds_menu_enter_mp3 $< > $(BUILD)/fx_menu_enter_mp3.h
-	$(CC) -x c -c -o $@ $(BUILD)/fx_menu_enter_mp3.h
-
-$(BUILD)/crt0_pre.o: source/crt0_pre.S
-	$(CC) $(MACHDEP) -c $< -o $@
-
-$(BUILD)/stub_zone.o: source/stub_zone.s tools/stub_zone.bin
-	$(CC) $(MACHDEP) -c $< -o $@
-
-# Safe inclusion of dependency files
--include $(DEPFILES)
-
-# Installable channel (title WIFN): see tools/make_wad.py.  Needs libWiiPy;
-# setup.sh installs it into tools/.venv, which is used when present.
-WADPY := $(if $(wildcard $(CURDIR)/tools/.venv/bin/python),$(CURDIR)/tools/.venv/bin/python,python3)
-
-wad: $(TARGET).wad
-
-$(TARGET).wad: $(TARGET).dol tools/make_wad.py tools/wad/template.wad tools/stub_zone.bin
-	$(WADPY) tools/make_wad.py $(TARGET).dol $@
+	$(CXX) $^ -o $@ $(LDFLAGS) $(LIBS)
 
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).dol $(TARGET).map $(TARGET).wad
+	rm -rf $(BUILD) $(TARGET).wuhb $(TARGET).rpx $(TARGET).elf $(TARGET).map
 
-.PHONY: wad clean run
+# Sources
+vpath %.cpp $(SOURCES)
+vpath %.c $(SOURCES)
+$(BUILD)/%.o: %.cpp | $(BUILD)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/%.o: %.c | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-run: $(TARGET).dol
-	wiiload $(TARGET).dol
+# Embedded files (WiiFin's fonts, pictures, sounds)
+define EMBED
+$(BUILD)/$(1).o: $(2) | $(BUILD)
+	xxd -i -n $(3) $$< > $(BUILD)/$(1).c
+	$(CC) $(MACHDEP) -c -o $$@ $(BUILD)/$(1).c
+endef
+$(eval $(call EMBED,cursor_pointer_png,data/cursors/PointerP1-64.png,data_cursors_PointerP1_64_png))
+$(eval $(call EMBED,cursor_hand_open_png,data/cursors/HandOpenP1-64.png,data_cursors_HandOpenP1_64_png))
+$(eval $(call EMBED,cursor_hand_closed_png,data/cursors/HandClosedP1-64.png,data_cursors_HandClosedP1_64_png))
+$(eval $(call EMBED,button_start_png,data/images/button_start.png,data_button_start_png))
+$(eval $(call EMBED,logo_wiifin_png,data/images/logo_wiifin.png,data_logo_wiifin_png))
+$(eval $(call EMBED,wii_font_ttf,data/fonts/wii_font.ttf,data_wii_font_ttf))
+$(eval $(call EMBED,jp_font_ttf,data/fonts/jp_font.ttf,data_jp_font_ttf))
+$(eval $(call EMBED,ring_png,data/images/ring.png,data_ring_png))
+$(eval $(call EMBED,music_mp3,data/sounds/bgm.mp3,data_music_mp3))
+$(eval $(call EMBED,fx_start_mp3,data/sounds/start.mp3,data_sounds_start_mp3))
+$(eval $(call EMBED,fx_select_mp3,data/sounds/select.mp3,data_sounds_select_mp3))
+$(eval $(call EMBED,fx_back_mp3,data/sounds/back.mp3,data_sounds_back_mp3))
+$(eval $(call EMBED,fx_backspace_mp3,data/sounds/backspace.mp3,data_sounds_backspace_mp3))
+$(eval $(call EMBED,fx_loading_mp3,data/sounds/loading.mp3,data_sounds_loading_mp3))
+$(eval $(call EMBED,fx_menu_enter_mp3,data/sounds/menu_enter.mp3,data_sounds_menu_enter_mp3))
+$(eval $(call EMBED,fx_menu_exit_mp3,data/sounds/menu_exit.mp3,data_sounds_menu_exit_mp3))
+$(eval $(call EMBED,fx_press_key_mp3,data/sounds/press_key.mp3,data_sounds_press_key_mp3))
+
+$(BUILD)/cacert_pem.o: data/certs/cacert.pem | $(BUILD)
+	(cat $<; printf '\0') > $(BUILD)/cacert_pem_null.pem
+	xxd -i -n data_cacert_pem $(BUILD)/cacert_pem_null.pem > $(BUILD)/cacert_pem.c
+	$(CC) $(MACHDEP) -c -o $@ $(BUILD)/cacert_pem.c
+
+# the translations (lang/*.po)
+LANG_PO := $(sort $(wildcard lang/*.po))
+$(BUILD)/lang_mo.o: $(LANG_PO) tools/lang_table.sh | $(BUILD)
+	bash tools/lang_table.sh $(BUILD) $(LANG_PO) > $(BUILD)/lang_mo.c
+	$(CC) $(MACHDEP) -c -o $@ $(BUILD)/lang_mo.c
+
+-include $(DEPFILES)

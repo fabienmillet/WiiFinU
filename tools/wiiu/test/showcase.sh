@@ -1,7 +1,7 @@
 #!/bin/bash
 # Screenshots of the Wii U version's main screens into tools/wiiu/test/showcase/
-# (run.sh with a profile signed in: CFG=<wiifin.cfg> of a test server).
-#   tools/wiiu/test/showcase.sh <wiifin.cfg>
+# (run.sh with a profile signed in: CFG=<wiifinu.cfg> of a test server).
+#   tools/wiiu/test/showcase.sh <wiifinu.cfg>
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CFG0=$1

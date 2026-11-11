@@ -2092,3 +2092,8 @@ msgstr "Video's in 1080p op de tv, gedecodeerd door de eigen chip van de console
 
 msgid "Back to the Wii U Menu?"
 msgstr "Terug naar het Wii U-menu?"
+
+#: source/core/PlaySession.cpp:808
+#, c-format
+msgid "Details are in %s on the SD card."
+msgstr "Details staan in %s op de SD-kaart."

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run WiiFin.wuhb in Cemu (Flatpak info.cemu.Cemu) on a virtual X display
+# Run WiiFinU.wuhb in Cemu (Flatpak info.cemu.Cemu) on a virtual X display
 # and take screenshots of the TV and the GamePad into tools/wiiu/test/out/.
 #
 #   tools/wiiu/test/run.sh <seconds> [every]
@@ -11,8 +11,8 @@
 #   DRAGS="12:100,200:300,200"  a finger slid from one point to the other
 #   TYPE="20:some.host"   text typed on the host keyboard (Cemu's keyboard takes it)
 #                         ("_" for a space); KEYS="22:Return" validates it
-#   CFG=file              put a wiifin.cfg on the card first (a profile)
-#   APP=WiiFin.rpx        run that instead of WiiFin.wuhb
+#   CFG=file              put a wiifinu.cfg on the card first (a profile)
+#   APP=WiiFinU.rpx       run that instead of WiiFinU.wuhb
 #   AUDIO=1               with sound (Cubeb) into a silent PipeWire sink
 #                         "wiifin_test" (made if missing), recorded into out/audio.wav
 #
@@ -24,7 +24,7 @@ REPO="$(cd "$HERE/../../.." && pwd)"
 SECS=${1:-30}
 EVERY=${2:-5}
 OUT="$HERE/out"
-APP=${APP:-$REPO/WiiFin.wuhb}
+APP=${APP:-$REPO/WiiFinU.wuhb}
 CEMU_CFG="$HOME/.var/app/info.cemu.Cemu/config/Cemu"
 CEMU_DATA="$HOME/.var/app/info.cemu.Cemu/data/Cemu"
 SD="$CEMU_DATA/sdcard"
@@ -33,10 +33,10 @@ export DISPLAY=$DISP
 unset WAYLAND_DISPLAY
 
 rm -rf "$OUT"; mkdir -p "$OUT"
-mkdir -p "$SD/wiiu/apps/WiiFin" "$CEMU_CFG/controllerProfiles"
+mkdir -p "$CEMU_CFG/controllerProfiles"
 cp "$HERE/cemu_gamepad.xml" "$CEMU_CFG/controllerProfiles/controller0.xml"
-[ -n "${CFG:-}" ] && cp "$CFG" "$SD/wiiu/apps/WiiFin/wiifin.cfg"
-rm -f "$SD/wiiu/apps/WiiFin/wiifin.log"
+[ -n "${CFG:-}" ] && mkdir -p "$SD/wiiu/apps/WiiFinU" && cp "$CFG" "$SD/wiiu/apps/WiiFinU/wiifinu.cfg"
+rm -f "$SD/wiiu/apps/WiiFinU/wiifinu.log"
 
 # Cemu's settings: Vulkan, no sound device, the windows where we look
 S="$CEMU_CFG/settings.xml"

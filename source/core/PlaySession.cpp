@@ -9,6 +9,7 @@
 #include "SoundFX.h"
 #include "Log.h"
 #include "Lang.h"
+#include "../version.h"
 #include "../ui/Ui.h"
 #include "../ui/LibraryView.h"
 #include "../jellyfin/JellyfinClient.h"
@@ -815,9 +816,16 @@ bool runPlaySession(JellyfinClient& client,
     if (!failWhy.empty() && !g_app_powerOff && !g_app_reset) {
         char says[256];
         snprintf(says, sizeof(says), tr("Server says: %s"), g_wiifin_stream_fail_body);
+#if defined(__3DS__) || defined(__WIIU__)
+        char logIs[128];
+        snprintf(logIs, sizeof(logIs), tr("Details are in %s on the SD card."), WIIFIN_FILES ".log");
+        std::string detail = g_wiifin_stream_fail_status >= 400 && g_wiifin_stream_fail_body[0]
+            ? std::string(says) : std::string(logIs);
+#else
         std::string detail = g_wiifin_stream_fail_status >= 400 && g_wiifin_stream_fail_body[0]
             ? std::string(says)
             : std::string(tr("Details are in wiifin.log on the SD card."));
+#endif
         if (detail.size() > 70) detail = detail.substr(0, 67) + "...";
         if (g_wiifin_stream_fail_status == 500)
             showErrorScreen(tr("Can't play this video"), failWhy,

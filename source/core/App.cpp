@@ -299,10 +299,23 @@ void App::init(const char* argv0) {
         "sdmc:/3ds/WiiFin/wiifin.cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
     };
 #elif defined(__WIIU__)
-    /* the Wii U: its folder next to the apps (the .wuhb sits in wiiu/apps/) */
+    /* the Wii U: its folder next to the apps (the .wuhb sits in wiiu/apps/).
+     * The first builds, named WiiFin, kept theirs in wiiu/apps/WiiFin/:
+     * moved once, the settings and profiles with it. */
     argvPath.clear();
+    {
+        struct stat st;
+        if (stat(APP_DIR, &st) != 0 && stat("fs:/vol/external01/wiiu/apps/WiiFin", &st) == 0 &&
+            rename("fs:/vol/external01/wiiu/apps/WiiFin", APP_DIR) == 0) {
+            rename(APP_DIR "/wiifin.cfg", APP_DIR "/" WIIFIN_FILES ".cfg");
+            rename(APP_DIR "/wiifin.cfg.bak", APP_DIR "/" WIIFIN_FILES ".cfg.bak");
+            remove(APP_DIR "/wiifin.log");
+            remove(APP_DIR "/wiifin.prev.log");
+            SYS_Report("[Settings] moved wiiu/apps/WiiFin to " APP_DIR "\n");
+        }
+    }
     const char* probes[] = {
-        "fs:/vol/external01/wiiu/apps/WiiFin/wiifin.cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+        APP_DIR "/" WIIFIN_FILES ".cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
     };
 #else
     const char* probes[] = {

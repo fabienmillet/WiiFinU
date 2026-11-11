@@ -1,3 +1,4 @@
+#include "../version.h"
 #include "Log.h"
 
 #include <stdio.h>
@@ -194,7 +195,7 @@ void Log::addPrivateUrl(const std::string& url)
 void Log::open(const std::string& dir)
 {
     if (s_lock == LWP_MUTEX_NULL || s_file) return;
-    std::string path = dir + "wiifin.log", prev = dir + "wiifin.prev.log";
+    std::string path = dir + WIIFIN_FILES ".log", prev = dir + WIIFIN_FILES ".prev.log";
     remove(prev.c_str());
     rename(path.c_str(), prev.c_str());
     FILE* f = fopen(path.c_str(), "w");

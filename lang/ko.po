@@ -2092,3 +2092,8 @@ msgstr "TV에서 1080p, 본체 칩으로 디코딩"
 
 msgid "Back to the Wii U Menu?"
 msgstr "Wii U 메뉴로 돌아갈까요?"
+
+#: source/core/PlaySession.cpp:808
+#, c-format
+msgid "Details are in %s on the SD card."
+msgstr "자세한 내용은 SD 카드의 %s에 있습니다."

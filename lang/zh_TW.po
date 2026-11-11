@@ -2091,3 +2091,8 @@ msgstr "電視上 1080p，由主機晶片解碼"
 
 msgid "Back to the Wii U Menu?"
 msgstr "返回 Wii U 選單？"
+
+#: source/core/PlaySession.cpp:808
+#, c-format
+msgid "Details are in %s on the SD card."
+msgstr "詳情請見SD卡上的 %s。"

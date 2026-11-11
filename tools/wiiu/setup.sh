@@ -2,7 +2,7 @@
 # The Wii U build's requirements: devkitPPC, wut and the portlibs it uses
 # (dkp-pacman, or Fedora's pacman as on the Wii side), mbedTLS with WiiFin's
 # config into libs/mbedtls/libwiiu, FFmpeg into libs/ffmpeg-wiiu.  Then:
-#   make -f Makefile.wiiu
+#   make
 set -e
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DEPS="${XDG_CACHE_HOME:-$HOME/.cache}/wiifin-3ds-deps"
@@ -34,4 +34,4 @@ if [ ! -f "$REPO/libs/mbedtls/libwiiu/libmbedtls.a" ]; then
 fi
 
 [ -n "$SKIP_FFMPEG" ] || [ -f "$REPO/libs/ffmpeg-wiiu/lib/libavcodec.a" ] || "$REPO/tools/wiiu/build_ffmpeg.sh"
-echo "ready: make -f Makefile.wiiu"
+echo "ready: make"
