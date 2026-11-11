@@ -11,6 +11,7 @@
 #include "GfxWiiU.h"
 
 #include <h264/decode.h>
+#include <coreinit/cache.h>
 #include <malloc.h>
 #include <string.h>
 #include <deque>
@@ -33,6 +34,7 @@ uint8_t* s_bits = nullptr;
 uint32_t s_bitsCap = 0;
 unsigned s_decoded = 0;
 bool     s_begun = false;
+TexWiiU* s_avoid[2] = {};   /* the frames shown and about to be */
 
 struct Out { int frame; double pts; };
 std::deque<Out> s_out;
@@ -113,6 +115,7 @@ bool open(int width, int height, int profile)
         if (!buf) break;
         memset(buf, 0, (size_t)s_pitch * s_alignedH);
         memset((uint8_t*)buf + (size_t)s_pitch * s_alignedH, 128, (size_t)s_pitch * s_alignedH / 2);
+        DCFlushRange(buf, frameSize);   /* (no dirty line written back over the decoder's) */
         Frame f;
         f.buf = buf;
         /* the Y texture owns the frame (freed when the GPU is done with it) */
@@ -120,7 +123,6 @@ bool open(int width, int height, int profile)
         f.uv = GfxWiiU::wrapMemory(GfxWiiU::Fmt::RG8, (width + 1) / 2, (height + 1) / 2,
                                    (uint8_t*)buf + (size_t)s_pitch * s_alignedH, s_pitch, false);
         if (!f.y || !f.uv) { GfxWiiU::destroy(f.uv); if (f.y) GfxWiiU::destroy(f.y); else free(buf); break; }
-        GfxWiiU::flush(f.y);
         s_pool.push_back(f);
     }
     if ((int)s_pool.size() < 8) {
@@ -177,8 +179,20 @@ bool decode(const uint8_t* data, int size, double pts)
         SYS_Report("[H264WiiU] SetBitstream: 0x%07X\n", r);
         return false;
     }
-    Frame& f = s_pool[s_next];
-    s_next = (s_next + 1) % (int)s_pool.size();
+    /* the next frame not shown nor waiting to be (a picture dropped as late
+     * goes on taking frames: the one on screen is never written over) */
+    int pick = s_next;
+    for (int tries = 0; tries < (int)s_pool.size(); ++tries) {
+        const int k = (s_next + tries) % (int)s_pool.size();
+        bool busy = s_pool[k].y == s_avoid[0] || s_pool[k].y == s_avoid[1];
+        {
+            std::lock_guard<std::mutex> g(s_outLock);
+            for (const Out& o : s_out) busy = busy || o.frame == k;
+        }
+        if (!busy) { pick = k; break; }
+    }
+    Frame& f = s_pool[pick];
+    s_next = (pick + 1) % (int)s_pool.size();
     r = H264DECExecute(s_mem, f.buf);
     if ((r & ~0xFF) != 0) {
         SYS_Report("[H264WiiU] Execute: 0x%07X\n", r);
@@ -217,5 +231,7 @@ bool next(TexWiiU*& y, TexWiiU*& uv, double& pts)
 }
 
 unsigned decoded() { return s_decoded; }
+
+void inUse(TexWiiU* shown, TexWiiU* next) { s_avoid[0] = shown; s_avoid[1] = next; }
 
 }

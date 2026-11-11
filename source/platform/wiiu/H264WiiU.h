@@ -32,6 +32,8 @@ void reset();
 /* The next picture in display order: its frame's textures and time.
  * false: none yet. */
 bool next(TexWiiU*& y, TexWiiU*& uv, double& pts);
+/* the frames the player shows and holds (not decoded into) */
+void inUse(TexWiiU* shown, TexWiiU* next);
 /* pictures decoded so far */
 unsigned decoded();
 

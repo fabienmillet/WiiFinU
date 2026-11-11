@@ -137,7 +137,11 @@ void scan()
         s_lastVs = vs; s_haveVs = true;
         s_rawVpad = vs; s_rawVpadOk = true;
     }
-    else if (s_haveVs && ve == VPAD_READ_NO_SAMPLES) vs = s_lastVs;   /* nothing new: as it was */
+    else if (s_haveVs && ve == VPAD_READ_NO_SAMPLES) {
+        /* nothing new: held as it was, nothing pressed or let go again */
+        vs = s_lastVs;
+        vs.trigger = vs.release = 0;
+    }
     else s_haveVs = false;
     if (s_haveVs) {
         pad |= fromVpad(vs.hold);
@@ -176,9 +180,22 @@ void scan()
         KPADError ke = KPAD_ERROR_OK;
         memset(&ks, 0, sizeof(ks));
         s_rawKpadOk[c] = false;
-        if (KPADReadEx((KPADChan)c, &ks, 1, &ke) <= 0 || ke != KPAD_ERROR_OK) continue;
-        s_rawKpad[c] = ks;
-        s_rawKpadOk[c] = true;
+        static KPADStatus s_lastKs[4];
+        static bool s_haveKs[4] = {};
+        if (KPADReadEx((KPADChan)c, &ks, 1, &ke) > 0 && ke == KPAD_ERROR_OK) {
+            s_lastKs[c] = ks;
+            s_haveKs[c] = true;
+            s_rawKpad[c] = ks;
+            s_rawKpadOk[c] = true;
+        } else if (ke == KPAD_ERROR_NO_SAMPLES && s_haveKs[c]) {
+            /* nothing new: still held (else a button held came back as a press) */
+            ks = s_lastKs[c];
+            ks.trigger = ks.release = 0;
+            ks.classic.trigger = ks.classic.release = 0;
+        } else {
+            s_haveKs[c] = false;
+            continue;
+        }
         if (ks.extensionType == WPAD_EXT_PRO_CONTROLLER) {
             pad |= fromClassic(ks.pro.hold);
             if (fabsf(ks.pro.leftStick.x) > fabsf(lx)) lx = ks.pro.leftStick.x;

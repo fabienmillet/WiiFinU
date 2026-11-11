@@ -19,6 +19,9 @@ Result edit(std::string& text, const char* okLabel, bool password, size_t maxLen
 /* it is up (or going away): WiiFin's controls wait */
 bool shown();
 
+/* at exit: the keyboard and its FS client gone */
+void shutdown();
+
 /* GfxWiiU, each frame: the keyboard's work, then its drawing in each
  * screen's pass */
 void calc();

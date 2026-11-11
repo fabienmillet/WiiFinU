@@ -11,8 +11,9 @@ namespace AudioWiiU {
 
 const int RATE = 48000;
 
-/* Starts the output (once) */
+/* Starts the output (once); at exit, closes it */
 bool init();
+void shutdown();
 
 /* The player's stream: 48 kHz stereo s16, pushed with the time of its
  * first sample; up to `ahead` seconds held (push waits beyond, false:

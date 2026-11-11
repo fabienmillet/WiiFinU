@@ -5,6 +5,8 @@
 namespace PlayerWiiU {
 /* A video is playing (its pictures are drawn) */
 bool videoActive();
+/* paused (the HOME menu), not toggled */
+void pause();
 /* The newest picture covering (x, y, w, h) of the drawing space (cut to
  * it): the GamePad's remote.  false: none. */
 bool drawPreview(float x, float y, float w, float h);

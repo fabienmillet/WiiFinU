@@ -29,6 +29,7 @@
 #include <ogc/ios.h>
 #include <ogc/if_config.h>
 #include <network.h>
+#include "GfxWiiU.h"
 
 extern "C" {
 
@@ -265,7 +266,7 @@ s32 ES_GetDeviceID(u32* id)
 static GXRModeObj s_mode = { 0, 640, 480, 480, 0, 0, 640, 480 };
 GXRModeObj* rmode = &s_mode;
 
-void VIDEO_WaitVSync(void) { GX2WaitForVsync(); }
+void VIDEO_WaitVSync(void) { if (!GfxWiiU::exiting()) GX2WaitForVsync(); }
 
 /* ---- network ---------------------------------------------------------------- */
 

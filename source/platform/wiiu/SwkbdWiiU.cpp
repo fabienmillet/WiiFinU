@@ -163,6 +163,17 @@ Result edit(std::string& text, const char* okLabel, bool password, size_t maxLen
     return Result::Busy;
 }
 
+void shutdown()
+{
+    if (!s_created) return;
+    nn::swkbd::Destroy();
+    s_created = false;
+    if (s_fs) { FSDelClient(s_fs, FS_ERROR_FLAG_NONE); free(s_fs); s_fs = nullptr; }
+    free(s_work);
+    s_work = nullptr;
+    s_st = St::Off;
+}
+
 bool shown()
 {
     return s_created && (s_st == St::Shown || nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden);

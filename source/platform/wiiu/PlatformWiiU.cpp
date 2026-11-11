@@ -478,14 +478,14 @@ void keepAwake(bool video, bool playing)
 }
 void restoreAwake() { keepAwake(false, false); }
 
-/* The HOME menu: a video pauses (as the Wii's HOME menu does) */
-bool s_pausedForHome = false;
+/* The HOME menu: a video pauses (as the Wii's HOME menu does); it stays
+ * paused coming back, for the user to go on */
 void onForeground(bool leaving)
 {
     if (leaving) {
-        s_pausedForHome = PlayerWiiU::videoActive() && !g_mplayer_paused;
-        if (s_pausedForHome) wii_player_pause_toggle();
-        SYS_Report("[PlatformWiiU] to the background%s\n", s_pausedForHome ? " (video paused)" : "");
+        const bool video = PlayerWiiU::videoActive();
+        if (video) PlayerWiiU::pause();
+        SYS_Report("[PlatformWiiU] to the background%s\n", video ? " (video paused)" : "");
     } else {
         SYS_Report("[PlatformWiiU] back\n");
     }

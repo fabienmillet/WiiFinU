@@ -57,3 +57,4 @@ libs/ffmpeg-wiiu/
 libs/mbedtls/libwiiu/
 tools/wiiu/test/out/
 tools/wiiu/test/out-cfg/
+tools/wiiu/test/showcase/

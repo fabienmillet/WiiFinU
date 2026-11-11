@@ -530,7 +530,9 @@ Http* s_http = nullptr;
 std::string s_url;
 OsThread* s_readerThread = nullptr;
 
-size_t ringFill() { return (size_t)(s_ring.wr - s_ring.rd); }
+/* (64-bit fields: two accesses on this CPU, read under the lock) */
+size_t ringFill() { std::lock_guard<std::mutex> g(s_ring.lock); return (size_t)(s_ring.wr - s_ring.rd); }
+long long ringSeekTo() { std::lock_guard<std::mutex> g(s_ring.lock); return s_ring.seekTo; }
 
 /* What PlaySession reads as MPlayer's cache fill (%): its thresholds are
  * for the Wii's 8 MB at 1.5-5 Mb/s (25% about 10 s ahead): the same bytes
@@ -558,7 +560,7 @@ void readerMain()
     if (g_stream_opened_cb) g_stream_opened_cb();
     static char tmp[65536];
     while (!s_quit) {
-        long long seek = s_ring.seekTo;
+        long long seek = ringSeekTo();
         if (seek >= 0) {
             {
                 std::lock_guard<std::mutex> g(s_ring.lock);
@@ -576,11 +578,12 @@ void readerMain()
             continue;
         }
         int n = httpRead(st, tmp, sizeof(tmp));
-        if (s_ring.seekTo >= 0) continue;     /* a seek came meanwhile: those bytes are not wanted */
+        if (ringSeekTo() >= 0) continue;      /* a seek came meanwhile: those bytes are not wanted */
         if (n <= 0) {
             /* a whole file cut short: on again from where it stopped */
             if (!st->done && st->total > 0 && !s_quit) {
-                long long at = s_ring.base + (long long)s_ring.wr;
+                long long at;
+                { std::lock_guard<std::mutex> g(s_ring.lock); at = s_ring.base + (long long)s_ring.wr; }
                 SYS_Report("[PlayerWiiU] connection lost at %lld, resuming\n", at);
                 if (httpOpen(st, st->url, at) / 100 == 2) continue;
             }
@@ -589,11 +592,12 @@ void readerMain()
             s_ring.changed.signal();
             continue;
         }
-        size_t w = (size_t)(s_ring.wr % RING_SIZE);
+        size_t w;
+        { std::lock_guard<std::mutex> g(s_ring.lock); w = (size_t)(s_ring.wr % RING_SIZE); }
         size_t first = RING_SIZE - w < (size_t)n ? RING_SIZE - w : (size_t)n;
         memcpy(s_ring.buf + w, tmp, first);
         if ((size_t)n > first) memcpy(s_ring.buf, tmp + first, n - first);
-        s_ring.wr += n;
+        { std::lock_guard<std::mutex> g(s_ring.lock); s_ring.wr += n; }
         g_wiifin_stream_bytes += n;
         updateFill();
         s_ring.changed.signal();
@@ -606,11 +610,11 @@ int avRead(void*, uint8_t* buf, int size)
     for (;;) {
         if (s_quit) return AVERROR_EXIT;
         size_t have = ringFill();
-        if (have > 0 && s_ring.seekTo < 0) {
+        if (have > 0 && ringSeekTo() < 0) {
             size_t n;
             {
                 std::lock_guard<std::mutex> g(s_ring.lock);
-                have = ringFill();
+                have = (size_t)(s_ring.wr - s_ring.rd);
                 n = have < (size_t)size ? have : (size_t)size;
                 size_t r = (size_t)(s_ring.rd % RING_SIZE);
                 size_t first = RING_SIZE - r < n ? RING_SIZE - r : n;
@@ -632,17 +636,20 @@ int64_t avSeek(void*, int64_t off, int whence)
     if (whence & AVSEEK_SIZE) return s_http && s_http->total > 0 ? s_http->total : -1;
     whence &= ~AVSEEK_FORCE;   /* FFmpeg may add it: the same seek */
     if (!s_http || s_http->total <= 0) return -1;
-    long long target = whence == SEEK_SET ? off : whence == SEEK_CUR ? s_ring.base + (long long)s_ring.rd + off
-                     : s_http->total + off;
-    /* within what is buffered: no new request */
-    long long pos = s_ring.base + (long long)s_ring.rd;
-    if (target >= pos && target <= s_ring.base + (long long)s_ring.wr) {
+    {
         std::lock_guard<std::mutex> g(s_ring.lock);
-        s_ring.rd += (unsigned long long)(target - pos);
-        return target;
+        const long long pos = s_ring.base + (long long)s_ring.rd;
+        const long long target = whence == SEEK_SET ? off : whence == SEEK_CUR ? pos + off : s_http->total + off;
+        /* within what is buffered: no new request */
+        if (target >= pos && target <= s_ring.base + (long long)s_ring.wr) {
+            s_ring.rd += (unsigned long long)(target - pos);
+            return target;
+        }
+        s_ring.seekTo = target;
+        off = target;
     }
-    s_ring.seekTo = target;
-    while (s_ring.seekTo >= 0 && !s_quit && !s_ring.error) s_ring.changed.wait(50);
+    const long long target = off;
+    while (ringSeekTo() >= 0 && !s_quit && !s_ring.error) s_ring.changed.wait(50);
     return s_ring.error ? -1 : target;
 }
 
@@ -697,14 +704,14 @@ void audioFlushQueue() { if (s_audioOn) AudioWiiU::streamFlush(); }
 
 /* ---- pictures -------------------------------------------------------------- */
 
-const int NTEX = 3;
+const int NTEX = 4;
 TexWiiU*     s_texY[NTEX] = {};
 TexWiiU*     s_texUV[NTEX] = {};
 int          s_texW = 0, s_texH = 0;
 float        s_aspect = 16.0f / 9.0f;   /* the picture's display aspect */
 bool         s_bt709 = false;
 volatile int s_front = -1;              /* the newest picture (the player's own textures) */
-volatile int s_drawn = -1;              /* the one the GPU may be drawing */
+unsigned     s_drawnAt[NTEX] = {};      /* the frame each was last drawn in (+1) */
 TexWiiU*     s_hwY = nullptr;           /* or the console decoder's frame shown */
 TexWiiU*     s_hwUV = nullptr;
 std::mutex   s_texLock;
@@ -718,7 +725,8 @@ void videoFree()
         GfxWiiU::destroy(s_texY[i]); s_texY[i] = nullptr;
         GfxWiiU::destroy(s_texUV[i]); s_texUV[i] = nullptr;
     }
-    s_front = s_drawn = -1;
+    s_front = -1;
+    for (unsigned& d : s_drawnAt) d = 0;
     s_hwY = s_hwUV = nullptr;
 }
 
@@ -767,6 +775,10 @@ void toNV12(const AVFrame* f, TexWiiU* ty, TexWiiU* tuv)
 void videoShowHw(TexWiiU* y, TexWiiU* uv)
 {
     ++s_shown;
+    /* written by the decoder: the GPU's cache forgets what it held */
+    GfxWiiU::touched(y);
+    GfxWiiU::touched(uv);
+    H264WiiU::inUse(y, nullptr);
     std::lock_guard<std::mutex> g(s_texLock);
     s_hwY = y;
     s_hwUV = uv;
@@ -778,10 +790,13 @@ void videoShow(const AVFrame* f)
     ++s_shown;
     int target = 0;
     {
+        /* not the newest, nor one drawn in the frame being recorded (the
+         * GPU draws it at its end) */
         std::lock_guard<std::mutex> g(s_texLock);
-        while (target == s_front || target == s_drawn) ++target;
+        const unsigned now = GfxWiiU::frames() + 1;
+        while (target < NTEX && (target == s_front || s_drawnAt[target] >= now)) ++target;
     }
-    if (!s_texY[target]) return;
+    if (target >= NTEX || !s_texY[target]) { ++s_skipped; return; }
     toNV12(f, s_texY[target], s_texUV[target]);
     std::lock_guard<std::mutex> g(s_texLock);
     s_front = target;
@@ -816,8 +831,13 @@ void logUrl(const char* tag, const std::string& url)
 u64 s_pausedSince = 0, s_sysStart = 0;
 double s_sysPts0 = 0;
 
+volatile bool s_pauseForce = false;   /* the HOME menu: paused, whatever was asked */
 void handlePause()
 {
+    if (s_pauseForce) {
+        s_pauseForce = false;
+        s_pauseToggle = g_mplayer_paused == 0;   /* a pause, not a toggle */
+    }
     if (!s_pauseToggle) return;
     s_pauseToggle = false;
     g_mplayer_paused = !g_mplayer_paused;
@@ -865,7 +885,7 @@ void playMain()
     s_ring.rd = s_ring.wr = 0; s_ring.base = 0;
     s_ring.eof = s_ring.error = false; s_ring.seekTo = -1;
     /* the reader above the decoder: the cache is never starved */
-    s_readerThread = startOsThread(readerMain, 128 * 1024, 14, OS_THREAD_ATTRIB_AFFINITY_ANY, "WiiFin reader");
+    s_readerThread = startOsThread(readerMain, 128 * 1024, 16, OS_THREAD_ATTRIB_AFFINITY_ANY, "WiiFin reader");
     if (!s_readerThread) goto out;
     /* some seconds in the cache before playing (MPlayer's -cache-min 8) */
     while (!s_quit && !s_ring.error && !s_ring.eof && ringFill() < RING_START) s_ring.changed.wait(100);
@@ -925,7 +945,8 @@ void playMain()
         AVStream* st = fmt->streams[vIdx];
         const AVCodecParameters* cp = st->codecpar;
         const int prof = (cp->profile & ~AV_PROFILE_H264_CONSTRAINED) == 66 ? 66 : cp->profile;
-        const bool fmtOk = cp->format == AV_PIX_FMT_YUV420P || cp->format == AV_PIX_FMT_YUVJ420P || cp->format < 0;
+        const bool fmtOk = (cp->format == AV_PIX_FMT_YUV420P || cp->format == AV_PIX_FMT_YUVJ420P || cp->format < 0) &&
+                           (cp->level <= 42 || cp->level == AV_LEVEL_UNKNOWN);
         hw = fmtOk && H264WiiU::open(cp->width, cp->height, prof);
         if (hw && cp->extradata_size > 0 && cp->extradata[0] == 1) {
             const AVBitStreamFilter* f = av_bsf_get_by_name("h264_mp4toannexb");
@@ -1126,7 +1147,12 @@ void playMain()
             const u64 vt0 = ticksNow();
             while (hw && !havePic) {
                 double t;
-                if (H264WiiU::next(hwY, hwUV, t)) { havePic = true; picPts = t; break; }
+                if (H264WiiU::next(hwY, hwUV, t)) {
+                    havePic = true;
+                    picPts = t;
+                    H264WiiU::inUse(s_hwY, hwY);
+                    break;
+                }
                 if (vq.empty()) {
                     if (eof && !hwDrained) { H264WiiU::drain(); hwDrained = true; continue; }
                     break;
@@ -1139,10 +1165,12 @@ void playMain()
                 ++hwFed;
                 hwFails = ok ? 0 : hwFails + 1;
                 if ((hwFails > 8 || hwFed > 120) && H264WiiU::decoded() == 0) {
-                    /* the console's decoder refuses this stream: FFmpeg's from now on */
-                    SYS_Report("[PlayerWiiU] the console's decoder gave no picture (%d refused): FFmpeg's from now on\n",
-                               hwFails);
-                    s_hwBroken = true;
+                    /* the console's decoder refuses this stream: a file goes on
+                     * converted by the server (H.264 it can decode); one of the
+                     * server's own: FFmpeg's (MPEG-4) from now on */
+                    SYS_Report("[PlayerWiiU] the console's decoder gave no picture (%d refused)%s\n", hwFails,
+                               g_wiifin_direct ? "" : ": MPEG-4 from now on");
+                    if (!g_wiifin_direct) s_hwBroken = true;
                     g_player_stop_reason = PLAYER_STOP_ERROR;
                     s_quit = true;
                     break;
@@ -1410,8 +1438,7 @@ bool VideoSurface::draw()
     {
         std::lock_guard<std::mutex> g(s_texLock);
         const int i = s_front;
-        s_drawn = i;
-        if (i >= 0) { y = s_texY[i]; uv = s_texUV[i]; }
+        if (i >= 0) { y = s_texY[i]; uv = s_texUV[i]; s_drawnAt[i] = GfxWiiU::frames() + 1; }
         else if (s_hwY) { y = s_hwY; uv = s_hwUV; }
     }
     if (!y || !uv) return false;
@@ -1431,6 +1458,7 @@ void VideoSurface::setZoom(Zoom z) { s_zoom = z; }
 VideoSurface::Zoom VideoSurface::zoom() { return s_zoom; }
 
 bool PlayerWiiU::videoActive() { return s_videoActive; }
+void PlayerWiiU::pause() { s_pauseForce = true; }
 
 bool PlayerWiiU::drawPreview(float x, float y, float w, float h)
 {
@@ -1438,7 +1466,7 @@ bool PlayerWiiU::drawPreview(float x, float y, float w, float h)
     TexWiiU *ty = nullptr, *tuv = nullptr;
     {
         std::lock_guard<std::mutex> g(s_texLock);
-        if (s_front >= 0) { ty = s_texY[s_front]; tuv = s_texUV[s_front]; }
+        if (s_front >= 0) { ty = s_texY[s_front]; tuv = s_texUV[s_front]; s_drawnAt[s_front] = GfxWiiU::frames() + 1; }
         else if (s_hwY) { ty = s_hwY; tuv = s_hwUV; }
     }
     if (!ty || !tuv) return false;

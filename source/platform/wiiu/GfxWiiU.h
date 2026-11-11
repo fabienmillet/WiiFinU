@@ -39,6 +39,9 @@ void     update(TexWiiU* t, const void* pixels, int stride);
 void*    pixels(TexWiiU* t);
 int      pitch(const TexWiiU* t);
 void     flush(TexWiiU* t);
+/* Written by other hardware (the H.264 decoder): the GPU's texture cache
+ * forgets it before the next frame is drawn */
+void     touched(TexWiiU* t);
 /* Freed when the GPU no longer draws it (the next frame) */
 void     destroy(TexWiiU* t);
 int      width(const TexWiiU* t);
@@ -69,6 +72,9 @@ void drawNV12(TexWiiU* y, TexWiiU* uv, float x, float y0, float w, float h, bool
  * finger on the GamePad (hideCursor, InputWiiU) */
 void setCursorTexture(GRRLIB_texImg* tex);
 void hideCursor(bool hide);
+
+/* Closed from the HOME menu: nothing is drawn any more */
+bool exiting();
 
 /* Frames shown so far (each GRRLIB_Render) */
 unsigned frames();

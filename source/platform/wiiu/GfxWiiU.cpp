@@ -23,6 +23,7 @@
 #include "shaders/texture_gsh.h"
 #include "shaders/nv12_gsh.h"
 #include "SwkbdWiiU.h"
+#include "AudioWiiU.h"
 
 #include <coreinit/cache.h>
 #include <coreinit/memdefaultheap.h>
@@ -136,6 +137,28 @@ int   s_primN = 0;
 /* textures to free once the GPU is done with them */
 std::mutex s_texMutex;
 std::vector<TexWiiU*> s_toFree;
+/* textures written by the CPU (or the H.264 decoder) since the last frame:
+ * the GPU's texture cache forgets them on the main thread (GX2's commands
+ * are its: other threads only flush the CPU's cache) */
+std::vector<TexWiiU*> s_dirty;
+
+void markDirty(TexWiiU* t)
+{
+    std::lock_guard<std::mutex> g(s_texMutex);
+    s_dirty.push_back(t);
+}
+
+/* the main thread, before drawing */
+void invalidateDirty()
+{
+    std::vector<TexWiiU*> v;
+    {
+        std::lock_guard<std::mutex> g(s_texMutex);
+        v.swap(s_dirty);
+    }
+    for (TexWiiU* t : v)
+        GX2Invalidate(GX2_INVALIDATE_MODE_TEXTURE, t->tex.surface.image, t->tex.surface.imageSize);
+}
 
 void identityMv(float m[3][4])
 {
@@ -180,6 +203,15 @@ void freePending()
     {
         std::lock_guard<std::mutex> g(s_texMutex);
         v.swap(s_toFree);
+        if (!v.empty() && !s_dirty.empty()) {
+            std::vector<TexWiiU*> keep;
+            for (TexWiiU* d : s_dirty) {
+                bool gone = false;
+                for (TexWiiU* f : v) gone = gone || f == d;
+                if (!gone) keep.push_back(d);
+            }
+            s_dirty.swap(keep);
+        }
     }
     for (TexWiiU* t : v) {
         if (t->freeImage) free(t->tex.surface.image);
@@ -265,7 +297,8 @@ void fill(TexWiiU* t, const u8* src, int stride, int shift)
         if (shift == 0) memcpy(d, row, rowB);
         else for (int x = 0; x < t->w; ++x) memcpy(d + x * t->bpp, row + ((x << shift) * t->bpp), t->bpp);
     }
-    GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, t->tex.surface.image, t->tex.surface.imageSize);
+    DCFlushRange(t->tex.surface.image, t->tex.surface.imageSize);
+    markDirty(t);
 }
 
 /* GX-format texels (4x4 tiles; RGBA8 in two halves: AR then GB) to rows */
@@ -536,6 +569,8 @@ void exit()
 {
     if (!s_up) return;
     s_up = false;
+    SwkbdWiiU::shutdown();
+    AudioWiiU::shutdown();
     if (!s_exiting) {
         /* leaving by ourselves (closed from the HOME menu: already done).
          * From the Homebrew Launcher: back to it (WHBProcShutdown); else
@@ -598,7 +633,8 @@ TexWiiU* make(Fmt fmt, int w, int h, const void* pixels, int stride)
     if (pixels) fill(t, (const u8*)pixels, stride, shift);
     else {
         memset(s.image, 0, s.imageSize);
-        GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, s.image, s.imageSize);
+        DCFlushRange(s.image, s.imageSize);
+        markDirty(t);
     }
     return t;
 }
@@ -649,8 +685,13 @@ void* pixels(TexWiiU* t) { return t ? t->tex.surface.image : nullptr; }
 int   pitch(const TexWiiU* t) { return t ? (int)t->tex.surface.pitch : 0; }
 void  flush(TexWiiU* t)
 {
-    if (t) GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, t->tex.surface.image, t->tex.surface.imageSize);
+    if (!t) return;
+    DCFlushRange(t->tex.surface.image, t->tex.surface.imageSize);
+    markDirty(t);
 }
+
+void touched(TexWiiU* t) { if (t) markDirty(t); }
+bool exiting() { return s_exiting; }
 
 void destroy(TexWiiU* t)
 {
@@ -956,6 +997,10 @@ void GRRLIB_Render(void)
     if (s_exiting) {
         /* closed from the HOME menu: WiiFin unwinds, nothing is drawn */
         s_inFrame = false;
+        {
+            std::lock_guard<std::mutex> g(s_texMutex);
+            s_dirty.clear();
+        }
         freePending();
         ++s_frames;
         return;
@@ -970,6 +1015,7 @@ void GRRLIB_Render(void)
         }
     }
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, s_vbuf, s_vcount * sizeof(Vtx));
+    invalidateDirty();
     SwkbdWiiU::calc();
 
     WHBGfxBeginRender();

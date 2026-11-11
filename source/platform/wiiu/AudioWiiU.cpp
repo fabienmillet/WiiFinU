@@ -246,6 +246,18 @@ bool init()
     return true;
 }
 
+void shutdown()
+{
+    MP3Player_Stop();
+    if (s_dev) {
+        SDL_PauseAudioDevice(s_dev, 1);
+        SDL_CloseAudioDevice(s_dev);
+        s_dev = 0;
+    }
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    streamStop();
+}
+
 void streamStart(double ahead)
 {
     init();
