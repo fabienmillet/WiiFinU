@@ -2097,3 +2097,27 @@ msgstr "¿Volver al menú de Wii U?"
 #, c-format
 msgid "Details are in %s on the SD card."
 msgstr "Detalles en %s, en la tarjeta SD."
+
+msgid "Episodes"
+msgstr "Episodios"
+
+msgid "Latest in %s"
+msgstr "Novedades en %s"
+
+msgid "From the start"
+msgstr "Desde el principio"
+
+msgid "No results"
+msgstr "Sin resultados"
+
+msgid "My Media"
+msgstr "Mis medios"
+
+msgid "Nothing here yet"
+msgstr "Aún no hay nada aquí"
+
+msgid "The server didn't answer: try again"
+msgstr "El servidor no ha respondido: vuelve a intentarlo"
+
+msgid "Resume"
+msgstr "Reanudar"

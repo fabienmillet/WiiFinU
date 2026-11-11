@@ -2097,3 +2097,27 @@ msgstr "Wii Uメニューに戻りますか？"
 #, c-format
 msgid "Details are in %s on the SD card."
 msgstr "詳細はSDカードの%sにあります。"
+
+msgid "Episodes"
+msgstr "エピソード"
+
+msgid "Latest in %s"
+msgstr "%sの新着"
+
+msgid "From the start"
+msgstr "最初から"
+
+msgid "No results"
+msgstr "見つかりませんでした"
+
+msgid "My Media"
+msgstr "マイメディア"
+
+msgid "Nothing here yet"
+msgstr "まだ何もありません"
+
+msgid "The server didn't answer: try again"
+msgstr "サーバーが応答しませんでした。もう一度お試しください"
+
+msgid "Resume"
+msgstr "続きから再生"

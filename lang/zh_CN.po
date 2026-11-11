@@ -2096,3 +2096,27 @@ msgstr "返回 Wii U 菜单？"
 #, c-format
 msgid "Details are in %s on the SD card."
 msgstr "详情见SD卡上的 %s。"
+
+msgid "Episodes"
+msgstr "剧集"
+
+msgid "Latest in %s"
+msgstr "%s 最新"
+
+msgid "From the start"
+msgstr "从头开始"
+
+msgid "No results"
+msgstr "没有结果"
+
+msgid "My Media"
+msgstr "我的媒体"
+
+msgid "Nothing here yet"
+msgstr "这里还没有内容"
+
+msgid "The server didn't answer: try again"
+msgstr "服务器没有响应：请重试"
+
+msgid "Resume"
+msgstr "继续播放"
