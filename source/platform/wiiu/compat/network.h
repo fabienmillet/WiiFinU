@@ -47,10 +47,13 @@ static inline s32 net_ioctl(s32 s, u32 cmd, void* argp)
     }
     return -EINVAL;
 }
-static inline struct hostent* net_gethostbyname(const char* n) { return gethostbyname(n); }
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* a name's IPv4 address through getaddrinfo (OgcWiiU.cpp): wut's
+ * gethostbyname reads h_errno from nsysnet every time, which Cemu lacks */
+struct hostent* wiiu_gethostbyname(const char* name);
+static inline struct hostent* net_gethostbyname(const char* n) { return wiiu_gethostbyname(n); }
 s32  net_init(void);
 void net_deinit(void);
 #ifdef __cplusplus

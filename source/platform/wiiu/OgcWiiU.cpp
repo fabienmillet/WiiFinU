@@ -270,6 +270,41 @@ void VIDEO_WaitVSync(void) { if (!GfxWiiU::exiting()) GX2WaitForVsync(); }
 
 /* ---- network ---------------------------------------------------------------- */
 
+/* A name's first IPv4 address, as gethostbyname gives it (a few results
+ * kept in turn: two threads resolving at once each keep theirs) */
+struct hostent* wiiu_gethostbyname(const char* name)
+{
+    struct Slot { struct hostent he; struct in_addr addr; char* list[2]; };
+    static Slot s_slots[8];
+    static unsigned s_next = 0;
+    static OSMutex s_lock;
+    static bool s_lockInit = false;
+    if (!s_lockInit) { OSInitMutex(&s_lock); s_lockInit = true; }
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    struct addrinfo* res = nullptr;
+    if (getaddrinfo(name, nullptr, &hints, &res) != 0 || !res) return nullptr;
+    struct hostent* out = nullptr;
+    for (struct addrinfo* a = res; a && !out; a = a->ai_next) {
+        if (a->ai_family != AF_INET || !a->ai_addr) continue;
+        OSLockMutex(&s_lock);
+        Slot& s = s_slots[s_next++ % 8];
+        OSUnlockMutex(&s_lock);
+        s.addr = ((struct sockaddr_in*)a->ai_addr)->sin_addr;
+        s.list[0] = (char*)&s.addr;
+        s.list[1] = nullptr;
+        memset(&s.he, 0, sizeof(s.he));
+        s.he.h_addrtype = AF_INET;
+        s.he.h_length = sizeof(s.addr);
+        s.he.h_addr_list = s.list;
+        out = &s.he;
+    }
+    freeaddrinfo(res);
+    return out;
+}
+
 /* wut's sockets start with the program */
 s32 net_init(void) { return 0; }
 void net_deinit(void) {}
