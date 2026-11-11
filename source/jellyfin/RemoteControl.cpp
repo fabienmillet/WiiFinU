@@ -557,6 +557,11 @@ void Remote::setPlayerActive(bool on) {
     s_queue.clear();   /* nothing left over from before */
 }
 
+void Remote::local(Cmd c, long long ticks, int value) {
+    if (s_lock == LWP_MUTEX_NULL) return;
+    push(c, ticks, value);
+}
+
 bool Remote::poll(Command& c) {
     if (s_lock == LWP_MUTEX_NULL) return false;
     Lock l;

@@ -102,6 +102,8 @@ public:
      * the next update() returns Action::Audio / Sub. */
     void remoteSeek(float secs);
     void remoteNudge(float delta) { nudgeSeek(delta); }
+    /* where the bar is, and the length (the Wii U's GamePad remote shows them) */
+    void times(float& pos, float& dur) const { pos = displayPosition(); dur = duration(); }
     void remoteTrack(bool audio, int index);
 
 private:

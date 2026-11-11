@@ -2033,3 +2033,15 @@ msgstr "显示在电视上，GamePad 作为遥控器（L3 + R3 切换）"
 
 msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
 msgstr "显示在 GamePad 上，电视显示相同画面（L3 + R3 切换）"
+
+msgid "HD Video"
+msgstr "高清视频"
+
+msgid "Videos at 480p on the TV too: the lightest for the network"
+msgstr "电视上也是 480p：对网络最轻"
+
+msgid "Videos at 720p on the TV, decoded by the console's own chip"
+msgstr "电视上 720p，由主机芯片解码"
+
+msgid "Videos at 1080p on the TV, decoded by the console's own chip"
+msgstr "电视上 1080p，由主机芯片解码"

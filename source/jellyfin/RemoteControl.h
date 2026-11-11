@@ -57,6 +57,8 @@ namespace Remote {
 
     void setPlayerActive(bool on);
     bool poll(Command& c);      /* the player: next command, oldest first */
+    /* a command of this console's own (the Wii U's GamePad remote) */
+    void local(Cmd c, long long ticks = 0, int value = 0);
     const char* name(Cmd c);    /* for the log */
 
     /* every frame: messages to the screen, commands dropped in the menus */

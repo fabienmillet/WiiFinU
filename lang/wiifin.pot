@@ -2034,3 +2034,15 @@ msgstr ""
 
 msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
 msgstr ""
+
+msgid "HD Video"
+msgstr ""
+
+msgid "Videos at 480p on the TV too: the lightest for the network"
+msgstr ""
+
+msgid "Videos at 720p on the TV, decoded by the console's own chip"
+msgstr ""
+
+msgid "Videos at 1080p on the TV, decoded by the console's own chip"
+msgstr ""

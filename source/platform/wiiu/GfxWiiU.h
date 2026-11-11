@@ -29,6 +29,9 @@ enum class Fmt { RGBA8, LA8, R8, RG8 };
  * pixels nullptr: cleared).  Bigger than 2048 pixels: shrunk.  Any thread.
  * nullptr: no memory. */
 TexWiiU* make(Fmt fmt, int w, int h, const void* pixels, int stride);
+/* A texture on memory of someone else's (the H.264 decoder's frames):
+ * pitchBytes a row; ownsImage: freed with it (when the GPU is done) */
+TexWiiU* wrapMemory(Fmt fmt, int w, int h, void* image, int pitchBytes, bool ownsImage);
 /* Same pixels again into an existing texture of that size and format */
 void     update(TexWiiU* t, const void* pixels, int stride);
 /* Its texels (rows of pitch() texels, in the format's bytes) to write

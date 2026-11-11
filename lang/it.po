@@ -2034,3 +2034,15 @@ msgstr "Sulla TV, il GamePad come telecomando (L3 + R3 li scambia)"
 
 msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
 msgstr "Sul GamePad, la TV mostra lo stesso (L3 + R3 li scambia)"
+
+msgid "HD Video"
+msgstr "Video HD"
+
+msgid "Videos at 480p on the TV too: the lightest for the network"
+msgstr "Video a 480p anche sulla TV: il più leggero per la rete"
+
+msgid "Videos at 720p on the TV, decoded by the console's own chip"
+msgstr "Video a 720p sulla TV, decodificati dal chip della console"
+
+msgid "Videos at 1080p on the TV, decoded by the console's own chip"
+msgstr "Video a 1080p sulla TV, decodificati dal chip della console"

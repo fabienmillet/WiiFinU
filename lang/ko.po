@@ -2034,3 +2034,15 @@ msgstr "TV에 표시, GamePad는 리모컨 (L3 + R3로 전환)"
 
 msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
 msgstr "GamePad에 표시, TV도 같은 화면 (L3 + R3로 전환)"
+
+msgid "HD Video"
+msgstr "HD 비디오"
+
+msgid "Videos at 480p on the TV too: the lightest for the network"
+msgstr "TV에서도 480p: 네트워크에 가장 가벼움"
+
+msgid "Videos at 720p on the TV, decoded by the console's own chip"
+msgstr "TV에서 720p, 본체 칩으로 디코딩"
+
+msgid "Videos at 1080p on the TV, decoded by the console's own chip"
+msgstr "TV에서 1080p, 본체 칩으로 디코딩"

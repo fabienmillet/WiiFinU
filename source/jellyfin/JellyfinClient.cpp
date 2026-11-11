@@ -5,6 +5,7 @@
 #endif
 #ifdef __WIIU__
 #include <coreinit/thread.h>
+#include "../platform/wiiu/PlayerWiiU.h"
 #endif
 #include <algorithm>
 #include "../core/ExitZone.h"
@@ -2540,6 +2541,14 @@ int JellyfinClient::videoBitrate() const {
 }
 
 int JellyfinClient::qualityBitrate(int q) {
+#ifdef __WIIU__
+    /* the Wii U: 480p MPEG-4 as the Wii's, H.264 for its HD */
+    static const int hd720[VIDEO_QUALITY_COUNT]  = { 2000000, 3000000, 4500000, 6000000 };
+    static const int hd1080[VIDEO_QUALITY_COUNT] = { 3000000, 5000000, 8000000, 12000000 };
+    const int qi = (q >= 0 && q < VIDEO_QUALITY_COUNT) ? q : 1;
+    if (PlayerWiiU::hdNow() == PlayerWiiU::HD_1080) return hd1080[qi];
+    if (PlayerWiiU::hdNow() == PlayerWiiU::HD_720) return hd720[qi];
+#endif
 #ifdef __3DS__
     /* the 3DS: 400x240 at most, decoded in software (the old 3DS's 268 MHz) */
     static const int bitrates[VIDEO_QUALITY_COUNT] = { 350000, 550000, 800000, 1200000 };
@@ -2657,13 +2666,20 @@ struct VideoLimit {
     int level;      /* 0: none */
     int bitrate;    /* 0: none */
 };
-/* cautious (software decoding), to widen with a console */
-const VideoLimit VIDEO_LIMITS[] = {
+/* MPEG-4 and MPEG-2 by FFmpeg (the CPU), H.264 by the console's decoder
+ * (to 1080p, its profiles up to High) */
+VideoLimit VIDEO_LIMITS[] = {
     { "mpeg4,mpeg1video,mpeg2video", 854, 576, 0,  6000000 },
-    { "h264",                        854, 480, 31, 3000000 },
+    { "h264",                        1920, 1080, 41, 20000000 },
 };
 const int MAX_FPS = 30;
-void fitLimitsToConsole() {}
+/* HD as asked (the TV's setting; the GamePad: 480p) */
+void fitLimitsToConsole() {
+    const int hd = PlayerWiiU::hdNow();
+    if (hd == PlayerWiiU::HD_1080)    VIDEO_LIMITS[1] = { "h264", 1920, 1080, 41, 20000000 };
+    else if (hd == PlayerWiiU::HD_720) VIDEO_LIMITS[1] = { "h264", 1280, 720, 41, 10000000 };
+    else                               VIDEO_LIMITS[1] = { "h264", 854, 480, 31, 4000000 };
+}
 int maxChannels(const std::string&, const struct DirectFormat*) { return 6; }
 /* its Wi-Fi (802.11n) */
 const int MAX_DIRECT_BPS = 10000000;
@@ -3014,6 +3030,25 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
         auth.userId.c_str(), mediaSourceId.c_str(), audioStreamIndex, subField,
         videoBps + AUDIO_BPS, (long long)startTimeTicks, codecProfiles);
 
+#ifdef __WIIU__
+    /* HD: H.264 (the console's decoder) and AAC, at 720p or 1080p */
+    const int wiiuHd = PlayerWiiU::hdNow();
+    const char* hdW = wiiuHd == PlayerWiiU::HD_1080 ? "1920" : "1280";
+    const char* hdH = wiiuHd == PlayerWiiU::HD_1080 ? "1080" : "720";
+    if (wiiuHd != PlayerWiiU::HD_OFF) {
+        std::string b(bodyBuf);
+        auto swap = [&b](const std::string& from, const std::string& to) {
+            size_t at = b.find(from);
+            if (at != std::string::npos) b.replace(at, from.size(), to);
+        };
+        swap("\"MaxWidth\":854,\"MaxHeight\":480", std::string("\"MaxWidth\":") + hdW + ",\"MaxHeight\":" + hdH);
+        swap("\"VideoCodec\":\"mpeg4\",\"AudioCodec\":\"mp3\"", "\"VideoCodec\":\"h264\",\"AudioCodec\":\"aac\"");
+        swap("\"Codec\":\"mpeg4\"", "\"Codec\":\"h264\"");
+        swap("\"Value\":\"854\"", std::string("\"Value\":\"") + hdW + "\"");
+        swap("\"Value\":\"480\"", std::string("\"Value\":\"") + hdH + "\"");
+        snprintf(bodyBuf, sizeof(bodyBuf), "%s", b.c_str());
+    }
+#endif
     SYS_Report("[PlaybackInfo] POST %s\n", fullUrl);
     SYS_Report("[PlaybackInfo] body: %.256s\n", bodyBuf);
 
@@ -3050,6 +3085,21 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     char vbBuf[16], abBuf[16];
     snprintf(vbBuf, sizeof(vbBuf), "%d", videoBps);
     snprintf(abBuf, sizeof(abBuf), "%d", AUDIO_BPS);
+#ifdef __WIIU__
+    if (wiiuHd != PlayerWiiU::HD_OFF) {
+        urlReplaceParam(relUrl, "VideoCodec", "h264");
+        urlReplaceParam(relUrl, "AudioCodec", "aac");
+        urlReplaceParam(relUrl, "AudioBitrate", abBuf);
+        urlReplaceParam(relUrl, "VideoBitrate", vbBuf);
+        urlReplaceParam(relUrl, "MaxVideoBitDepth", "8");
+        urlReplaceParam(relUrl, "MaxWidth", hdW);
+        urlReplaceParam(relUrl, "MaxHeight", hdH);
+        /* the console's decoder: High profile at most, level 4.1 */
+        urlReplaceParam(relUrl, "Profile", "high");
+        urlReplaceParam(relUrl, "Level", "41");
+    } else
+#endif
+    {
     urlReplaceParam(relUrl, "VideoCodec", "mpeg4");
     urlReplaceParam(relUrl, "AudioCodec", "mp3");
     urlReplaceParam(relUrl, "AudioBitrate", abBuf);
@@ -3057,6 +3107,7 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     urlReplaceParam(relUrl, "MaxVideoBitDepth", "8");
     urlReplaceParam(relUrl, "MaxWidth", WIIFIN_MAX_W);
     urlReplaceParam(relUrl, "MaxHeight", WIIFIN_MAX_H);
+    }
     /* why, for the server's dashboard: what kept the file from playing as
      * it is (else Jellyfin says DirectPlayError, direct play being off here) */
     if (!transcodeReasons.empty()) urlReplaceParam(relUrl, "TranscodeReasons", transcodeReasons.c_str());

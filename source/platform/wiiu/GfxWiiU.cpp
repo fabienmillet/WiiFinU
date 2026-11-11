@@ -66,6 +66,7 @@ struct TexWiiU {
     u16        w, h;
     u8         fmt;          /* GfxWiiU::Fmt */
     u8         bpp;
+    bool       freeImage;    /* its image is its own (else someone else's) */
 };
 static const u32 TEX_MAGIC = 0x54585755;   /* 'TXWU' */
 
@@ -178,7 +179,7 @@ void freePending()
         v.swap(s_toFree);
     }
     for (TexWiiU* t : v) {
-        free(t->tex.surface.image);
+        if (t->freeImage) free(t->tex.surface.image);
         free(t);
     }
 }
@@ -572,11 +573,49 @@ TexWiiU* make(Fmt fmt, int w, int h, const void* pixels, int stride)
     GX2InitTextureRegs(&t->tex);
     s.image = memalign(s.alignment, s.imageSize);
     if (!s.image) { free(t); return nullptr; }
+    t->freeImage = true;
     if (pixels) fill(t, (const u8*)pixels, stride, shift);
     else {
         memset(s.image, 0, s.imageSize);
         GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, s.image, s.imageSize);
     }
+    return t;
+}
+
+TexWiiU* wrapMemory(Fmt fmt, int w, int h, void* image, int pitchBytes, bool ownsImage)
+{
+    if (w <= 0 || h <= 0 || !image) return nullptr;
+    TexWiiU* t = (TexWiiU*)calloc(1, sizeof(TexWiiU));
+    if (!t) return nullptr;
+    t->magic = TEX_MAGIC;
+    t->w = (u16)w;
+    t->h = (u16)h;
+    t->fmt = (u8)fmt;
+    t->bpp = (u8)bppOf(fmt);
+    GX2Surface& s = t->tex.surface;
+    s.width = w;
+    s.height = h;
+    s.depth = 1;
+    s.mipLevels = 1;
+    s.dim = GX2_SURFACE_DIM_TEXTURE_2D;
+    s.format = gx2Fmt(fmt);
+    s.use = GX2_SURFACE_USE_TEXTURE;
+    s.tileMode = GX2_TILE_MODE_LINEAR_ALIGNED;
+    t->tex.viewNumMips = 1;
+    t->tex.viewNumSlices = 1;
+    t->tex.compMap = compMap(fmt);
+    GX2CalcSurfaceSizeAndAlignment(&s);
+    if ((int)s.pitch * t->bpp != pitchBytes) {
+        static bool told = false;
+        if (!told) {
+            told = true;
+            SYS_Report("[GfxWiiU] memory texture: pitch %d bytes, GX2's %u\n", pitchBytes, (unsigned)(s.pitch * t->bpp));
+        }
+        s.pitch = pitchBytes / t->bpp;
+    }
+    GX2InitTextureRegs(&t->tex);
+    s.image = image;
+    t->freeImage = ownsImage;
     return t;
 }
 

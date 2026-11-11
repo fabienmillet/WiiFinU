@@ -1,6 +1,7 @@
 /* App settings and saved profiles: sd:/apps/WiiFin/wiifin.cfg */
 #ifdef __WIIU__
 #include "../platform/wiiu/PlatformWiiU.h"
+#include "../platform/wiiu/PlayerWiiU.h"
 #endif
 #include "App.h"
 #include "../ui/Ui.h"
@@ -115,6 +116,8 @@ void App::loadSettings() {
             const int v = atoi(val);
             PlatformWiiU::setScreens(v == 1 ? PlatformWiiU::Screens::TV
                                      : v == 2 ? PlatformWiiU::Screens::GamePad : PlatformWiiU::Screens::Auto);
+        } else if (strcmp(key, "wiiu_hd") == 0) {
+            PlayerWiiU::setHd(atoi(val));
 #endif
         } else if (strcmp(key, "library_view") == 0) {
             int v = atoi(val);
@@ -266,6 +269,7 @@ void App::saveSettings() {
     fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());
 #ifdef __WIIU__
     fprintf(f, "wiiu_screens=%d\n",     (int)PlatformWiiU::screens());
+    fprintf(f, "wiiu_hd=%d\n",          PlayerWiiU::hd());
 #endif
     {
         int l, t, r, b;

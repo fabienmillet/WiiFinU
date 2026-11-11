@@ -16,6 +16,7 @@
 #include "PlayerWiiU.h"
 #include "GfxWiiU.h"
 #include "AudioWiiU.h"
+#include "H264WiiU.h"
 #include "../../player/WiiPlayer.h"
 #include "../../player/VideoSurface.h"
 #include "../../player/stream_wiifin.h"
@@ -51,7 +52,9 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libswresample/swresample.h>
+#include <libavcodec/bsf.h>
 }
 
 mbedtls_x509_crt* wiifin_ca_chain();
@@ -676,6 +679,8 @@ bool   audioRoom() { return s_audioOn && audioQueuedFrames() < (int)(AUDIO_AHEAD
 
 volatile bool s_audioStop = false;
 int s_h264Threads = 3;
+/* the console's H.264 decoder: refused once, not tried again (FFmpeg then) */
+bool s_hwBroken = false;
 bool audioPush(const s16* pcm, int frames, double pts)
 {
     while (!s_quit) {
@@ -698,8 +703,10 @@ TexWiiU*     s_texUV[NTEX] = {};
 int          s_texW = 0, s_texH = 0;
 float        s_aspect = 16.0f / 9.0f;   /* the picture's display aspect */
 bool         s_bt709 = false;
-volatile int s_front = -1;              /* the newest picture */
+volatile int s_front = -1;              /* the newest picture (the player's own textures) */
 volatile int s_drawn = -1;              /* the one the GPU may be drawing */
+TexWiiU*     s_hwY = nullptr;           /* or the console decoder's frame shown */
+TexWiiU*     s_hwUV = nullptr;
 std::mutex   s_texLock;
 volatile bool s_videoActive = false;
 
@@ -712,6 +719,7 @@ void videoFree()
         GfxWiiU::destroy(s_texUV[i]); s_texUV[i] = nullptr;
     }
     s_front = s_drawn = -1;
+    s_hwY = s_hwUV = nullptr;
 }
 
 bool videoAlloc(int w, int h)
@@ -755,6 +763,16 @@ void toNV12(const AVFrame* f, TexWiiU* ty, TexWiiU* tuv)
     GfxWiiU::flush(tuv);
 }
 
+/* a frame of the console's decoder: shown as it is */
+void videoShowHw(TexWiiU* y, TexWiiU* uv)
+{
+    ++s_shown;
+    std::lock_guard<std::mutex> g(s_texLock);
+    s_hwY = y;
+    s_hwUV = uv;
+    s_front = -1;
+}
+
 void videoShow(const AVFrame* f)
 {
     ++s_shown;
@@ -767,6 +785,7 @@ void videoShow(const AVFrame* f)
     toNV12(f, s_texY[target], s_texUV[target]);
     std::lock_guard<std::mutex> g(s_texLock);
     s_front = target;
+    s_hwY = s_hwUV = nullptr;
 }
 
 /* ---- the player thread ----------------------------------------------------- */
@@ -829,6 +848,8 @@ void playMain()
     AVFormatContext* fmt = nullptr;
     AVIOContext* io = nullptr;
     AVCodecContext *vdec = nullptr, *adec = nullptr;
+    bool hw = false;                 /* the console's H.264 decoder */
+    AVBSFContext* bsf = nullptr;     /* AVCC to Annex B, for it */
     SwrContext* swr = nullptr;
     AVPacket* pkt = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
@@ -898,7 +919,38 @@ void playMain()
     if (vIdx < 0 && aIdx < 0) { SYS_Report("[PlayerWiiU] no audio nor video\n"); goto out; }
     if (fmt->duration > 0) g_mplayer_duration = (float)(fmt->duration / (double)AV_TIME_BASE);
 
-    if (vIdx >= 0) {
+    if (vIdx >= 0 && fmt->streams[vIdx]->codecpar->codec_id == AV_CODEC_ID_H264 && !s_hwBroken) {
+        /* H.264: the console's decoder (HD without the CPU); a stream in
+         * MKV or MP4 (AVCC) goes to it as Annex B */
+        AVStream* st = fmt->streams[vIdx];
+        const AVCodecParameters* cp = st->codecpar;
+        const int prof = (cp->profile & ~AV_PROFILE_H264_CONSTRAINED) == 66 ? 66 : cp->profile;
+        const bool fmtOk = cp->format == AV_PIX_FMT_YUV420P || cp->format == AV_PIX_FMT_YUVJ420P || cp->format < 0;
+        hw = fmtOk && H264WiiU::open(cp->width, cp->height, prof);
+        if (hw && cp->extradata_size > 0 && cp->extradata[0] == 1) {
+            const AVBitStreamFilter* f = av_bsf_get_by_name("h264_mp4toannexb");
+            if (!f || av_bsf_alloc(f, &bsf) < 0 || avcodec_parameters_copy(bsf->par_in, cp) < 0) av_bsf_free(&bsf);
+            else {
+                bsf->time_base_in = st->time_base;
+                if (av_bsf_init(bsf) < 0) av_bsf_free(&bsf);
+            }
+            if (!bsf) { SYS_Report("[PlayerWiiU] no Annex B filter\n"); H264WiiU::close(); hw = false; }
+        }
+        if (hw) {
+            const int w = cp->width, h = cp->height;
+            AVRational sar = cp->sample_aspect_ratio;
+            s_aspect = h > 0 ? (float)w / h * (sar.num > 0 && sar.den > 0 ? (float)sar.num / sar.den : 1.0f) : 16.0f / 9.0f;
+            s_bt709 = cp->color_space == AVCOL_SPC_BT709 || (cp->color_space == AVCOL_SPC_UNSPECIFIED && h > 576);
+            SYS_Report("[PlayerWiiU] video h264 %dx%d (profile %d, level %d) aspect %.2f %s: the console's decoder%s\n",
+                       w, h, cp->profile, cp->level, (double)s_aspect, s_bt709 ? "BT.709" : "BT.601",
+                       bsf ? ", Annex B" : "");
+            s_texW = w; s_texH = h;
+        } else {
+            SYS_Report("[PlayerWiiU] H.264 profile %d %s: decoded by FFmpeg\n", cp->profile,
+                       av_get_pix_fmt_name((AVPixelFormat)cp->format) ? av_get_pix_fmt_name((AVPixelFormat)cp->format) : "?");
+        }
+    }
+    if (vIdx >= 0 && !hw) {
         AVStream* st = fmt->streams[vIdx];
         const AVCodec* c = avcodec_find_decoder(st->codecpar->codec_id);
         vdec = c ? avcodec_alloc_context3(c) : nullptr;
@@ -976,6 +1028,23 @@ void playMain()
             updateFill();
         };
         auto clearQueue = [&]() { for (AVPacket* q : vq) av_packet_free(&q); vq.clear(); vqBytes = 0; havePic = false; };
+        TexWiiU *hwY = nullptr, *hwUV = nullptr;
+        bool hwDrained = false;
+        int hwFails = 0, hwFed = 0;
+        AVPacket* annexb = av_packet_alloc();
+        /* an access unit to the console's decoder (through the filter) */
+        auto hwFeed = [&](AVPacket* q) -> bool {
+            const double pts = q->pts != AV_NOPTS_VALUE ? q->pts * av_q2d(vtb)
+                             : q->dts != AV_NOPTS_VALUE ? q->dts * av_q2d(vtb) : 0;
+            if (!bsf) return H264WiiU::decode(q->data, q->size, pts);
+            bool ok = true;
+            if (av_bsf_send_packet(bsf, q) < 0) return false;
+            while (av_bsf_receive_packet(bsf, annexb) == 0) {
+                ok = H264WiiU::decode(annexb->data, annexb->size, pts) && ok;
+                av_packet_unref(annexb);
+            }
+            return ok;
+        };
 
         while (!s_quit) {
             if (g_app_powerOff || g_app_reset) { g_player_stop_reason = PLAYER_STOP_EOF; break; }
@@ -988,6 +1057,7 @@ void playMain()
                 if (target < 0) target = 0;
                 if (av_seek_frame(fmt, -1, (int64_t)(target * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD) >= 0) {
                     if (vdec) avcodec_flush_buffers(vdec);
+                    if (hw) { H264WiiU::reset(); if (bsf) av_bsf_flush(bsf); hwDrained = false; }
                     if (adec) avcodec_flush_buffers(adec);
                     clearQueue();
                     audioFlushQueue();
@@ -1034,7 +1104,7 @@ void playMain()
                         }
                     }
                     s_aTicks += ticksNow() - t0;
-                } else if (pkt->stream_index == vIdx && vdec) {
+                } else if (pkt->stream_index == vIdx && (vdec || hw)) {
                     AVPacket* q = av_packet_clone(pkt);
                     if (q) { vq.push_back(q); vqBytes += q->size; }
                 }
@@ -1054,7 +1124,31 @@ void playMain()
 
             /* the next picture */
             const u64 vt0 = ticksNow();
-            while (!havePic && !vq.empty()) {
+            while (hw && !havePic) {
+                double t;
+                if (H264WiiU::next(hwY, hwUV, t)) { havePic = true; picPts = t; break; }
+                if (vq.empty()) {
+                    if (eof && !hwDrained) { H264WiiU::drain(); hwDrained = true; continue; }
+                    break;
+                }
+                AVPacket* q = vq.front();
+                vq.pop_front();
+                vqBytes -= q->size;
+                const bool ok = hwFeed(q);
+                av_packet_free(&q);
+                ++hwFed;
+                hwFails = ok ? 0 : hwFails + 1;
+                if ((hwFails > 8 || hwFed > 120) && H264WiiU::decoded() == 0) {
+                    /* the console's decoder refuses this stream: FFmpeg's from now on */
+                    SYS_Report("[PlayerWiiU] the console's decoder gave no picture (%d refused): FFmpeg's from now on\n",
+                               hwFails);
+                    s_hwBroken = true;
+                    g_player_stop_reason = PLAYER_STOP_ERROR;
+                    s_quit = true;
+                    break;
+                }
+            }
+            while (!hw && !havePic && !vq.empty()) {
                 AVPacket* q = vq.front();
                 vq.pop_front();
                 vqBytes -= q->size;
@@ -1066,7 +1160,7 @@ void playMain()
                     picPts = pic->best_effort_timestamp != AV_NOPTS_VALUE ? pic->best_effort_timestamp * av_q2d(vtb) : 0;
                 }
             }
-            if (!havePic && eof && vq.empty()) {
+            if (!hw && !havePic && eof && vq.empty()) {
                 /* the decoder's last pictures (frame threads hold some) */
                 avcodec_send_packet(vdec, nullptr);
                 if (avcodec_receive_frame(vdec, pic) >= 0) {
@@ -1108,11 +1202,14 @@ void playMain()
                 ++s_skipped;
                 continue;     /* behind: not shown */
             }
-            if (pic->width != s_texW || pic->height != s_texH) {
-                if (!videoAlloc(pic->width, pic->height)) continue;
-                s_videoActive = true;
+            if (hw) videoShowHw(hwY, hwUV);
+            else {
+                if (pic->width != s_texW || pic->height != s_texH) {
+                    if (!videoAlloc(pic->width, pic->height)) continue;
+                    s_videoActive = true;
+                }
+                videoShow(pic);
             }
-            videoShow(pic);
             g_mplayer_time_pos = (float)picPts;
             if (!started) {
                 started = true;
@@ -1141,6 +1238,7 @@ void playMain()
         clearQueue();
         s_heldBytes = 0;
         av_frame_free(&pic);
+        av_packet_free(&annexb);
     }
 
 out:
@@ -1159,6 +1257,11 @@ out:
     av_frame_free(&frame);
     free(pcm);
     videoFree();
+    av_bsf_free(&bsf);
+    if (hw) {
+        SYS_Report("[PlayerWiiU] the console's decoder: %u pictures\n", H264WiiU::decoded());
+        H264WiiU::close();
+    }
     if (s_http) { connClose(s_http->conn); delete s_http; s_http = nullptr; }
     free(s_ring.buf);
     s_ring.buf = nullptr;
@@ -1288,7 +1391,7 @@ void wii_player_set_music_tick(void (*cb)(int paused)) { s_musicTick = cb; }
 extern "C" {
 int g_wiifin_smooth_motion = 1;
 unsigned wiifin_video_frames(void) { return s_shown; }
-void wiifin_video_clear(void) { std::lock_guard<std::mutex> g(s_texLock); s_front = -1; }
+void wiifin_video_clear(void) { std::lock_guard<std::mutex> g(s_texLock); s_front = -1; s_hwY = s_hwUV = nullptr; }
 void wiifin_video_report(const char* when) { SYS_Report("[PlayerWiiU] %s: %u pictures shown\n", when, s_shown); }
 }
 
@@ -1309,6 +1412,7 @@ bool VideoSurface::draw()
         const int i = s_front;
         s_drawn = i;
         if (i >= 0) { y = s_texY[i]; uv = s_texUV[i]; }
+        else if (s_hwY) { y = s_hwY; uv = s_hwUV; }
     }
     if (!y || !uv) return false;
     const float L = Ui::screenLeft(), R = Ui::screenRight(), SW = R - L, SH = 480.0f;
@@ -1327,3 +1431,12 @@ void VideoSurface::setZoom(Zoom z) { s_zoom = z; }
 VideoSurface::Zoom VideoSurface::zoom() { return s_zoom; }
 
 bool PlayerWiiU::videoActive() { return s_videoActive; }
+
+namespace { int s_hd = PlayerWiiU::HD_720; }
+void PlayerWiiU::setHd(int hd) { s_hd = hd < HD_OFF ? HD_OFF : hd > HD_1080 ? HD_1080 : hd; }
+int  PlayerWiiU::hd() { return s_hd; }
+int  PlayerWiiU::hdNow()
+{
+    if (s_hwBroken || GfxWiiU::mode() != GfxWiiU::Mode::Remote) return HD_OFF;
+    return s_hd;
+}

@@ -2034,3 +2034,15 @@ msgstr "テレビに表示、GamePadはリモコン（L3 + R3で切り替え）"
 
 msgid "On the GamePad, the TV showing the same (L3 + R3 swaps)"
 msgstr "GamePadに表示、テレビも同じ画面（L3 + R3で切り替え）"
+
+msgid "HD Video"
+msgstr "HDビデオ"
+
+msgid "Videos at 480p on the TV too: the lightest for the network"
+msgstr "テレビでも480p：ネットワークに最も軽い"
+
+msgid "Videos at 720p on the TV, decoded by the console's own chip"
+msgstr "テレビで720p、本体のチップでデコード"
+
+msgid "Videos at 1080p on the TV, decoded by the console's own chip"
+msgstr "テレビで1080p、本体のチップでデコード"

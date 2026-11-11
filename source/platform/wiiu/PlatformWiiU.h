@@ -21,7 +21,9 @@ Screens  screens();
 /* a TV seems plugged in (HDMI) */
 bool     tvPresent();
 
-/* What the remote shows as playing (the player sets it, "" none) */
+/* What the remote shows as playing (the player sets it, "" none), and
+ * where it is (each frame: the bar's position and the length, seconds) */
 void setNowPlaying(const char* title, const char* subtitle);
+void setPlayTimes(float pos, float dur);
 
 }

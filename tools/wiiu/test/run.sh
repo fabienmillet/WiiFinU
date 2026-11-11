@@ -43,7 +43,7 @@ p = sys.argv[1]
 s = open(p).read()
 s = re.sub(r'(<Graphic>\s*<api>)\d(</api>)', r'\g<1>1\2', s)
 s = re.sub(r'<TVDevice>[^<]*</TVDevice>', '<TVDevice></TVDevice>', s)
-s = re.sub(r'<logflag>\d+</logflag>', '<logflag>131077</logflag>', s)   # files, unsupported calls, OSReport
+s = re.sub(r'<logflag>\d+</logflag>', '<logflag>' + str(131077 + (512 if __import__('os').environ.get('H264LOG') else 0)) + '</logflag>', s)   # files, unsupported calls, OSReport (+ H.264)
 s = re.sub(r'<check_update>true</check_update>', '<check_update>false</check_update>', s)
 s = re.sub(r'<open_pad>false</open_pad>', '<open_pad>true</open_pad>', s)
 s = re.sub(r'<window_position>.*?</window_position>', '<window_position>\n        <x>0</x>\n        <y>0</y>\n    </window_position>', s, flags=re.S)

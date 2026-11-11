@@ -20,6 +20,7 @@
 #include "../../core/Lang.h"
 #include "../../core/Text.h"
 #include "../../player/WiiPlayer.h"
+#include "../../jellyfin/RemoteControl.h"
 
 #include <avm/tv.h>
 #include <tve/tve.h>
@@ -36,6 +37,7 @@ namespace {
 
 PlatformWiiU::Screens s_screens = PlatformWiiU::Screens::Auto;
 std::string s_playTitle, s_playSub;
+float s_playPos = 0, s_playDur = 0;
 
 uint64_t nowMs() { return (uint64_t)OSTicksToMilliseconds(OSGetSystemTime()); }
 
@@ -162,9 +164,11 @@ void act(Ctl c)
     }
     switch (c) {
         case C_HERE: PlatformWiiU::setScreens(PlatformWiiU::Screens::GamePad); break;
-        case C_PLAY: wii_player_pause_toggle(); break;
-        case C_BACK10: wii_player_seek_rel(-10.0f); break;
-        case C_FWD30: wii_player_seek_rel(30.0f); break;
+        /* as the server's remote control does (PlaySession: a seek in a
+         * transcode asks the server again) */
+        case C_PLAY: Remote::local(Remote::Cmd::PlayPause); break;
+        case C_BACK10: Remote::local(Remote::Cmd::Rewind); break;
+        case C_FWD30: Remote::local(Remote::Cmd::FastForward); break;
         default: break;
     }
 }
@@ -208,7 +212,8 @@ void handleTouch()
         if (c == C_PAD) {
             if (tap) { InputWiiU::inject(PAD_BUTTON_A); s_ptrUsed = now; }
         } else if (c == C_BAR) {
-            if (s_barPick >= 0 && g_mplayer_duration > 0) wii_player_seek_abs(s_barPick * g_mplayer_duration);
+            if (s_barPick >= 0 && s_playDur > 0)
+                Remote::local(Remote::Cmd::Seek, (long long)(s_barPick * s_playDur * 10000000.0));
             s_barPick = -1;
         } else if (ctlAt(s_lastTX, s_lastTY) == c && !(c >= C_UP && c <= C_RIGHT && now - s_heldSince > 400)) {
             act(c);
@@ -266,7 +271,7 @@ void drawPlaying()
     Ui::text(R_PAD.x + 20, R_PAD.y + 18, title, 22, p.text);
     if (!s_playSub.empty()) Ui::text(R_PAD.x + 20, R_PAD.y + 52, s_playSub.c_str(), 15, p.textDim);
     /* the progress */
-    const float dur = g_mplayer_duration, pos = wii_player_time_pos();
+    const float dur = s_playDur, pos = s_playPos;
     float f = dur > 0 ? pos / dur : 0;
     if (s_barPick >= 0) f = s_barPick;
     f = f < 0 ? 0 : f > 1 ? 1 : f;
@@ -462,6 +467,12 @@ void setScreens(Screens s)
 
 Screens screens() { return s_screens; }
 bool tvPresent() { return s_tvPresent; }
+
+void setPlayTimes(float pos, float dur)
+{
+    s_playPos = pos;
+    s_playDur = dur;
+}
 
 void setNowPlaying(const char* title, const char* subtitle)
 {

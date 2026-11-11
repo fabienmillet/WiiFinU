@@ -1,5 +1,6 @@
 #ifdef __WIIU__
 #include "../platform/wiiu/PlatformWiiU.h"
+#include "../platform/wiiu/PlayerWiiU.h"
 #endif
 #include "SettingsView.h"
 #include "Ui.h"
@@ -17,7 +18,7 @@
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_SCREENS };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_SCREENS, R_HD };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -73,7 +74,7 @@ void SettingsView::openSection(int s) {
 #elif defined(__WIIU__)
     /* the Wii U: its two screens; HDMI (no TV area to fit), no disc slot
      * light, its own player (no frame blending) */
-    else if (s == 1) rows = { R_SCREENS, R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
+    else if (s == 1) rows = { R_SCREENS, R_HD, R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
                               R_SSL, R_QUALITY, R_DIRECT };
 #else
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
@@ -192,6 +193,9 @@ void SettingsView::activate(int index) {
 #ifdef __WIIU__
         case R_SCREENS:
             PlatformWiiU::setScreens((PlatformWiiU::Screens)(((int)PlatformWiiU::screens() + 1) % 3));
+            break;
+        case R_HD:
+            PlayerWiiU::setHd((PlayerWiiU::hd() + 1) % 3);
             break;
 #endif
         case R_SIGNIN:   /* at once, a passcode, the password: chosen, applied on leaving */
@@ -380,6 +384,16 @@ void SettingsView::describeRows() {
         };
         const int v = (int)PlatformWiiU::screens();
         drawRow(R_SCREENS, N_("Screens"), desc[v], name[v], v == 0 ? p.ok : p.accent);
+    }
+    {
+        static const char* name[3] = { "480p", "720p", "1080p" };
+        static const char* desc[3] = {
+            N_("Videos at 480p on the TV too: the lightest for the network"),
+            N_("Videos at 720p on the TV, decoded by the console's own chip"),
+            N_("Videos at 1080p on the TV, decoded by the console's own chip"),
+        };
+        const int v = PlayerWiiU::hd();
+        drawRow(R_HD, N_("HD Video"), desc[v], name[v], v == 0 ? 0x8A9099FF : p.accent);
     }
 #endif
     drawRow(0, N_("SSL Verification"),

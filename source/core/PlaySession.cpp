@@ -615,6 +615,13 @@ bool runPlaySession(JellyfinClient& client,
                 break;
             }
 
+#ifdef __WIIU__
+            {   /* the GamePad's remote: the bar's position and the length */
+                float pos, dur;
+                view.times(pos, dur);
+                PlatformWiiU::setPlayTimes(pos, dur);
+            }
+#endif
             view.render(ir);
             GRRLIB_Render();
             VideoSurface::endFrame();
