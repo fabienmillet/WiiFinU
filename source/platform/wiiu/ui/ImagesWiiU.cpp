@@ -24,6 +24,8 @@ struct Entry {
     GRRLIB_texImg* tex = nullptr;
     unsigned used = 0;        /* frame last asked */
     unsigned asked = 0;       /* order asked (the newest loads first) */
+    unsigned failedAt = 0;    /* the frame it last failed in */
+    int tries = 0;            /* failures so far */
 };
 
 JellyfinClient* s_client = nullptr;
@@ -89,6 +91,11 @@ void* worker(void* slot)
         if (it != s_map.end() && it->second.st == St::Loading) {
             it->second.tex = tex;
             it->second.st = tex ? St::Ready : St::Failed;
+            if (!tex) {
+                it->second.failedAt = s_frame;
+                ++it->second.tries;
+                SYS_Report("[ImagesWiiU] %s: none (try %d)\n", k.c_str(), it->second.tries);
+            }
         } else if (tex) {
             GRRLIB_FreeTexture(tex);   /* dropped meanwhile */
         }
@@ -170,6 +177,12 @@ void endFrame()
             s_map.erase(ready[i].second);
         }
     }
+    /* a failure (the network, the server busy): asked again a while later,
+     * three times at most, while it is still on a screen */
+    for (auto& e : s_map)
+        if (e.second.st == St::Failed && e.second.tries < 3 && s_frame - e.second.failedAt > 300 &&
+            s_frame - e.second.used < 30)
+            e.second.st = St::Queued;
     /* failed and queued ones not wanted any more: forgotten */
     for (auto it = s_map.begin(); it != s_map.end();) {
         if ((it->second.st == St::Queued || it->second.st == St::Failed) && s_frame - it->second.used > 120)
