@@ -28,7 +28,7 @@ APP_SHORT   ?= WiiFin
 APP_AUTHOR  := Fabien MILLET
 
 PWU         := source/platform/wiiu
-SOURCES     := source source/core source/input source/ui source/jellyfin source/player $(PWU)
+SOURCES     := source source/core source/input source/ui source/jellyfin source/player $(PWU) $(PWU)/ui
 
 # The Wii's own pieces, done by $(PWU) on the Wii U
 WII_ONLY    := source/core/LwpJoinFix.cpp source/core/Reload.cpp \

@@ -1,6 +1,6 @@
 /* JpegTexture on the Wii U: a JPEG (posters, backdrops, photos) into an
- * RGBA8 texture, at most 1024 pixels a side (libjpeg's own scaling, 1/2,
- * 1/4...): the TV's 1280x720 never shows a picture bigger than that. */
+ * RGBA8 texture, at most 2048 pixels a side (libjpeg's own scaling, 1/2,
+ * 1/4...): a 1080p TV's backdrops whole, the GPU's textures up to 2048. */
 #include "../../ui/JpegTexture.h"
 #include "GfxWiiU.h"
 #include <setjmp.h>
@@ -35,7 +35,7 @@ GRRLIB_texImg* loadJPEGTexture(const u8* data, u32 size)
     cinfo.dct_method = JDCT_IFAST;
     cinfo.scale_num = 1;
     cinfo.scale_denom = 1;
-    while ((cinfo.image_width / cinfo.scale_denom > 1024 || cinfo.image_height / cinfo.scale_denom > 1024) &&
+    while ((cinfo.image_width / cinfo.scale_denom > 2048 || cinfo.image_height / cinfo.scale_denom > 2048) &&
            cinfo.scale_denom < 8)
         cinfo.scale_denom *= 2;
     jpeg_start_decompress(&cinfo);

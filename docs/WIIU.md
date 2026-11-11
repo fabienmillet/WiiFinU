@@ -22,7 +22,13 @@ Settings, profiles and the log (`wiifin.log`, for bug reports) are kept in `sd:/
 
 **L3 + R3** (both sticks pressed) swaps them at any time; the remote has a button to bring WiiFin to the GamePad.
 
-The **remote control** (the GamePad while WiiFin is on the TV):
+**Browsing** (home, libraries, series, a film's page, albums, search) has screens of its own, drawn in HD at the screens' own resolutions (the TV in 1280x720 units, sharp at 1080p too; posters, backdrops and covers fetched at that size), with the Wii U Menu's touches (a light diagonal pattern, rounded tiles in a white frame; the *Light* theme is the closest to the console's menu):
+- with a TV, as the Wii U Menu does: the **GamePad is the navigation** (tiles to touch and scroll, its buttons: Up from the first row reaches the bar: search, settings, profiles), and the **TV shows the selection big**: its backdrop, title, details, synopsis, cast, and the row it is in (a Pro Controller user follows on the TV);
+- on the GamePad alone: the same navigation, the film's page with its synopsis.
+
+The other screens (sign-in, profiles, settings, the music player, the player) are the Wii's, on the TV with the GamePad as their remote.
+
+The **remote control** (the GamePad while WiiFin's other screens and the videos are on the TV):
 - the arrows and A, L / B / R and + (WiiFin's menu), as the GamePad's buttons;
 - a **touch pad** that moves a pointer on the TV (a tap: A there);
 - at the bottom, the buttons of the screen shown on the TV ("A Open", "Y Search"...), to tap;

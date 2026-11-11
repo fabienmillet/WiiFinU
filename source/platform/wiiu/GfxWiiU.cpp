@@ -963,17 +963,21 @@ void GRRLIB_Exit(void)
     GfxWiiU::exit();
 }
 
-static void recordRemote()
-{
-    if (s_mode != GfxWiiU::Mode::Remote || !s_remoteDrawer) return;
-    /* the GamePad: its own 854x480 space, glyphs 1:1 */
+/* the GamePad's own drawing (its 854x480 space, glyphs 1:1) into its list,
+ * the main frame's state kept meanwhile */
+static struct {
     float proj[4][4], mv[3][4], vp[4], gmv[3][4];
-    int clip[4];
-    memcpy(proj, s_proj, sizeof(proj)); memcpy(mv, s_mv, sizeof(mv));
-    memcpy(vp, s_vp, sizeof(vp)); memcpy(clip, s_clip, sizeof(clip));
-    memcpy(gmv, GXmodelView2D, sizeof(gmv));
+    int   clip[4];
     float l, sx, sy;
-    Text::frameMapping(l, sx, sy);
+} s_saved;
+static bool s_inPad = false, s_padRecorded = false;
+
+static void enterPad()
+{
+    memcpy(s_saved.proj, s_proj, sizeof(s_proj)); memcpy(s_saved.mv, s_mv, sizeof(s_mv));
+    memcpy(s_saved.vp, s_vp, sizeof(s_vp)); memcpy(s_saved.clip, s_clip, sizeof(s_clip));
+    memcpy(s_saved.gmv, GXmodelView2D, sizeof(s_saved.gmv));
+    Text::frameMapping(s_saved.l, s_saved.sx, s_saved.sy);
     s_list = &s_remote;
     orthoProj(s_proj, 0, 480, 0, 854);
     identityMv(s_mv);
@@ -982,14 +986,50 @@ static void recordRemote()
     s_clip[2] = -1;
     s_matDirty = true;
     Text::setFrameMapping(0.0f, 1.0f, 1.0f);
-    s_remoteDrawer();
-    Text::setFrameMapping(l, sx, sy);
-    memcpy(s_proj, proj, sizeof(proj)); memcpy(s_mv, mv, sizeof(mv));
-    memcpy(s_vp, vp, sizeof(vp)); memcpy(s_clip, clip, sizeof(clip));
-    memcpy(GXmodelView2D, gmv, sizeof(gmv));
+    s_inPad = true;
+}
+
+static void leavePad()
+{
+    Text::setFrameMapping(s_saved.l, s_saved.sx, s_saved.sy);
+    memcpy(s_proj, s_saved.proj, sizeof(s_proj)); memcpy(s_mv, s_saved.mv, sizeof(s_mv));
+    memcpy(s_vp, s_saved.vp, sizeof(s_vp)); memcpy(s_clip, s_saved.clip, sizeof(s_clip));
+    memcpy(GXmodelView2D, s_saved.gmv, sizeof(s_saved.gmv));
     s_list = &s_main;
     s_matDirty = true;
+    s_inPad = false;
 }
+
+static void recordRemote()
+{
+    /* a screen drew the GamePad itself this frame: no remote */
+    if (s_padRecorded || s_mode != GfxWiiU::Mode::Remote || !s_remoteDrawer) return;
+    enterPad();
+    s_remoteDrawer();
+    leavePad();
+}
+
+} // extern "C"
+
+namespace GfxWiiU {
+
+bool padBegin()
+{
+    if (s_mode != Mode::Remote || s_inPad || s_exiting) return false;
+    beginFrame();
+    enterPad();
+    s_padRecorded = true;
+    return true;
+}
+
+void padEnd()
+{
+    if (s_inPad) leavePad();
+}
+
+}
+
+extern "C" {
 
 void GRRLIB_Render(void)
 {
@@ -997,6 +1037,7 @@ void GRRLIB_Render(void)
     if (s_exiting) {
         /* closed from the HOME menu: WiiFin unwinds, nothing is drawn */
         s_inFrame = false;
+        s_padRecorded = false;
         {
             std::lock_guard<std::mutex> g(s_texMutex);
             s_dirty.clear();
@@ -1040,6 +1081,7 @@ void GRRLIB_Render(void)
     }
     WHBGfxFinishRender();
     s_inFrame = false;
+    s_padRecorded = false;
     ++s_frames;
     freePending();
     /* the system: the HOME menu (waits there), the app closed */

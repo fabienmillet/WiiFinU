@@ -22,6 +22,7 @@
 #include "../platform/3ds/ui/Ui3ds.h"
 #endif
 #ifdef __WIIU__
+#include "../platform/wiiu/ui/BrowseWiiU.h"
 #include "../platform/wiiu/GfxWiiU.h"
 #include "../platform/wiiu/PlatformWiiU.h"
 #endif
@@ -634,6 +635,55 @@ void App::loop() {
                     bv.exitTo = Browse3ds::Exit::None;
                     runSettings(&p);
                     if (!running) return;
+                } else {
+                    MusicSession::stop(true);
+                    SYS_Report("[WiiFin] back to the profiles\n");
+                    return;
+                }
+            }
+        }
+#endif
+#ifdef __WIIU__
+        {   /* the Wii U: its own browsing screens (HD, its two screens, touch) */
+            BrowseWiiU bv(jellyfinClient, auth, p.serverUrl, p.username);
+            jellyfinClient.postCapabilities(p.serverUrl, auth);
+            Remote::start(p.serverUrl, auth.accessToken, jellyfinClient.sslVerify);
+            struct RemoteOff { ~RemoteOff() { Remote::stop(); } } remoteOff;
+            for (;;) {
+                while (true) {
+                    Input::update();
+                    Input::readIR(ir);
+                    if (g_app_powerOff || g_app_reset) { running = false; break; }
+                    if (Input::isHomePressed() && showHomeOverlay()) { running = false; break; }
+                    if (bv.frame(ir)) break;
+                    GRRLIB_Render();
+                }
+                if (!running) return;
+                if (bv.pendingPlayIsMusic) {
+                    bv.pendingPlayIsMusic = false;
+                    SoundFX::play(SoundFX::FX::Play);
+                    MusicPlayerView mpv(font, jellyfinClient, auth, p.serverUrl);
+                    mpv.setCursorTex(cursorPointerTex);
+                    mpv.setTracks(bv.pendingMusicTracks, bv.pendingMusicTrackIdx);
+                    mpv.setShuffleStart(bv.pendingMusicShuffle);
+                    bv.pendingMusicShuffle = false;
+                    bool wantsExit = mpv.run();
+                    if (g_app_powerOff || g_app_reset) { running = false; return; }
+                    SoundFX::play(SoundFX::FX::Back);
+                    if (wantsExit) { running = false; return; }
+                    bv.onPlaybackFinished();
+                } else if (!bv.pendingPlayUrl.empty()) {
+                    std::string lastItemId;
+                    bool wantsExit = runPlaySession(jellyfinClient, auth, p.serverUrl, bv,
+                                                    font, btnTex, cursorPointerTex, ringTex, lastItemId);
+                    if (wantsExit || g_app_powerOff || g_app_reset) { running = false; return; }
+                    saveSettings();
+                    bv.onPlaybackFinished();
+                } else if (bv.exitTo == BrowseWiiU::Exit::Settings) {
+                    bv.exitTo = BrowseWiiU::Exit::None;
+                    runSettings(&p);
+                    if (!running) return;
+                    bv.onPlaybackFinished();
                 } else {
                     MusicSession::stop(true);
                     SYS_Report("[WiiFin] back to the profiles\n");

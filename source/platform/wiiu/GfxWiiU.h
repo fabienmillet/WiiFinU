@@ -56,6 +56,13 @@ Mode mode();
 /* The GamePad's drawer in Remote mode (an 854x480 space; GX and Ui calls,
  * glyphs rasterised 1:1).  Called in GRRLIB_Render. */
 void setRemoteDrawer(void (*draw)());
+/* A screen drawing the GamePad itself (the browsing screens: their
+ * navigation there, the TV showing the main frame): between padBegin and
+ * padEnd the drawing goes to the GamePad, in its 854x480 pixels (glyphs
+ * 1:1), instead of the remote.  Remote mode only: false otherwise (the
+ * main frame is on the GamePad).  Each frame anew. */
+bool padBegin();
+void padEnd();
 /* Output pixels per drawing unit of the main frame: 1 on the GamePad,
  * 1.5 on a 720p TV (Ui's glyphs are rasterised for it) */
 float mainScale();
