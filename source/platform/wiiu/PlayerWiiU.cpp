@@ -1432,6 +1432,24 @@ VideoSurface::Zoom VideoSurface::zoom() { return s_zoom; }
 
 bool PlayerWiiU::videoActive() { return s_videoActive; }
 
+bool PlayerWiiU::drawPreview(float x, float y, float w, float h)
+{
+    if (!s_videoActive || w <= 0 || h <= 0) return false;
+    TexWiiU *ty = nullptr, *tuv = nullptr;
+    {
+        std::lock_guard<std::mutex> g(s_texLock);
+        if (s_front >= 0) { ty = s_texY[s_front]; tuv = s_texUV[s_front]; }
+        else if (s_hwY) { ty = s_hwY; tuv = s_hwUV; }
+    }
+    if (!ty || !tuv) return false;
+    /* covering the box, centred */
+    float pw = w, ph = w / s_aspect;
+    if (ph < h) { ph = h; pw = h * s_aspect; }
+    GX_LoadPosMtxImm(GXmodelView2D, GX_PNMTX0);
+    GfxWiiU::drawNV12(ty, tuv, x + (w - pw) * 0.5f, y + (h - ph) * 0.5f, pw, ph, s_bt709);
+    return true;
+}
+
 namespace { int s_hd = PlayerWiiU::HD_720; }
 void PlayerWiiU::setHd(int hd) { s_hd = hd < HD_OFF ? HD_OFF : hd > HD_1080 ? HD_1080 : hd; }
 int  PlayerWiiU::hd() { return s_hd; }

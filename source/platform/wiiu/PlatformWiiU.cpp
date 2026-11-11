@@ -270,10 +270,26 @@ std::string fmtTime(float s)
 void drawPlaying()
 {
     const Ui::Palette& p = Ui::pal();
-    Ui::roundRect(R_PAD.x, R_PAD.y, R_PAD.w, R_PAD.h, 18, Ui::alpha(p.cardTop, 0.55f), Ui::alpha(p.cardBottom, 0.55f));
+    /* the picture itself behind the controls (the remote's space is
+     * 854 units on GX's 640 frame pixels: the scissor's) */
+    {
+        const float k = 640.0f / 854.0f;
+        const int cx0 = (int)ceilf(R_PAD.x * k), cx1 = (int)floorf((R_PAD.x + R_PAD.w) * k);
+        GRRLIB_ClipDrawing(cx0, (int)R_PAD.y, cx1 - cx0, (int)R_PAD.h);
+        const bool pic = PlayerWiiU::drawPreview(R_PAD.x, R_PAD.y, R_PAD.w, R_PAD.h);
+        GRRLIB_ClipReset();
+        if (pic) {
+            /* darker where the text and the buttons are */
+            GX_LoadPosMtxImm(GXmodelView2D, GX_PNMTX0);
+            Ui::roundRect(R_PAD.x, R_PAD.y, R_PAD.w, 90, 0, 0x000000B0, 0x00000000);
+            Ui::roundRect(R_PAD.x, R_PAD.y + 120, R_PAD.w, R_PAD.h - 120, 0, 0x00000000, 0x000000C8);
+        }
+        Ui::roundBorder(R_PAD.x - 1, R_PAD.y - 1, R_PAD.w + 2, R_PAD.h + 2, 18, 3.0f, p.bgBottom);
+        if (!pic) Ui::roundRect(R_PAD.x, R_PAD.y, R_PAD.w, R_PAD.h, 18, Ui::alpha(p.cardTop, 0.55f), Ui::alpha(p.cardBottom, 0.55f));
+    }
     const char* title = s_playTitle.empty() ? tr("Now playing") : s_playTitle.c_str();
-    Ui::text(R_PAD.x + 20, R_PAD.y + 18, title, 22, p.text);
-    if (!s_playSub.empty()) Ui::text(R_PAD.x + 20, R_PAD.y + 52, s_playSub.c_str(), 15, p.textDim);
+    Ui::text(R_PAD.x + 20, R_PAD.y + 18, title, 22, 0xFFFFFFFF);
+    if (!s_playSub.empty()) Ui::text(R_PAD.x + 20, R_PAD.y + 52, s_playSub.c_str(), 15, 0xFFFFFFC0);
     /* the progress */
     const float dur = s_playDur, pos = s_playPos;
     float f = dur > 0 ? pos / dur : 0;
@@ -283,8 +299,8 @@ void drawPlaying()
     Ui::roundRect(R_BAR.x, by, R_BAR.w, 8, 4, p.field);
     Ui::roundRect(R_BAR.x, by, R_BAR.w * f, 8, 4, p.accent);
     Ui::circle(R_BAR.x + R_BAR.w * f, by + 4, s_held == C_BAR ? 12 : 9, p.accent);
-    Ui::text(R_BAR.x, by + 16, fmtTime(s_barPick >= 0 ? s_barPick * dur : pos).c_str(), 14, p.textDim);
-    if (dur > 0) Ui::textRight(R_BAR.x + R_BAR.w, by + 16, fmtTime(dur).c_str(), 14, p.textDim);
+    Ui::text(R_BAR.x, by + 16, fmtTime(s_barPick >= 0 ? s_barPick * dur : pos).c_str(), 14, 0xFFFFFFD0);
+    if (dur > 0) Ui::textRight(R_BAR.x + R_BAR.w, by + 16, fmtTime(dur).c_str(), 14, 0xFFFFFFD0);
     /* the transport */
     key(R_BACK10, C_BACK10, "-10 s", 22);
     key(R_PLAY, C_PLAY, "", 0, true);

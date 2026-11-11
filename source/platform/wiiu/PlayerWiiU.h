@@ -5,6 +5,9 @@
 namespace PlayerWiiU {
 /* A video is playing (its pictures are drawn) */
 bool videoActive();
+/* The newest picture covering (x, y, w, h) of the drawing space (cut to
+ * it): the GamePad's remote.  false: none. */
+bool drawPreview(float x, float y, float w, float h);
 
 /* HD video on the TV (Settings > HD Video, saved as wiiu_hd): H.264
  * converted to 720p or 1080p by the server, decoded by the console's own
