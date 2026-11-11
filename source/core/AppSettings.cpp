@@ -8,9 +8,11 @@
 #include "Utils.h"
 #include "Lang.h"
 #include "SoundFX.h"
+#include "MusicSession.h"
 #include "../player/VideoSurface.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
+#include "../player/PlayerView.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,6 +91,10 @@ void App::loadSettings() {
             jellyfinClient.sslVerify = atoi(val) != 0;
         } else if (strcmp(key, "music_enabled") == 0) {
             musicEnabled = atoi(val) != 0;
+        } else if (strcmp(key, "skip_prompts") == 0) {
+            g_wiifin_skip_prompts = atoi(val) != 0;
+        } else if (strcmp(key, "music_autoplay") == 0) {
+            MusicSession::setAutoplay(atoi(val) != 0);
         } else if (strcmp(key, "ui_sounds") == 0) {
             SoundFX::setEnabled(atoi(val) != 0);
         } else if (strcmp(key, "test_freeze_at") == 0) {
@@ -103,8 +109,12 @@ void App::loadSettings() {
                 Ui::setTheme(t >= 0 && t < Ui::THEME_COUNT ? (Ui::Theme)t : Ui::Theme::Dark);
                 /* settings saved before home_layout existed: Flix meant rows
                  * (home_layout, written after ui_theme, overrides this) */
-                if (Ui::theme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
+                if (Ui::chosenTheme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
             }
+        } else if (strcmp(key, "christmas") == 0) {
+            Ui::setFestive(atoi(val) != 0);
+        } else if (strcmp(key, "test_christmas") == 0) {
+            Ui::forceFestive(atoi(val) != 0);   /* tests */
         } else if (strcmp(key, "smooth_motion") == 0) {
             g_wiifin_smooth_motion = atoi(val) != 0;
         } else if (strcmp(key, "disc_light") == 0) {
@@ -193,7 +203,7 @@ void App::loadSettings() {
 
 ViewPrefs App::currentView() const {
     ViewPrefs v;
-    v.theme        = (int)Ui::theme();
+    v.theme        = (int)Ui::chosenTheme();
     v.homeLayout   = (int)Ui::homeLayout();
     v.libraryStyle = (int)Ui::libraryStyle();
     v.solidColors  = Ui::solidColors() ? 1 : 0;
@@ -234,10 +244,10 @@ void App::logSettings() {
     int l, t, r, b;
     Ui::safeArea(l, t, r, b);
     SYS_Report("[Settings] ssl %d, music %d, sounds %d, quality %s, direct %d, smooth %d, "
-               "theme %s, home %s, view %d, light %d, area %d,%d,%d,%d, solid %d, clock %s, language %s\n",
+               "theme %s, christmas %d, home %s, view %d, light %d, area %d,%d,%d,%d, solid %d, clock %s, language %s\n",
                jellyfinClient.sslVerify, musicEnabled, SoundFX::enabled(),
                JellyfinClient::videoQualityName(jellyfinClient.videoQuality), jellyfinClient.directPlay,
-               g_wiifin_smooth_motion, Ui::themeName(Ui::theme()),
+               g_wiifin_smooth_motion, Ui::themeName(Ui::chosenTheme()), Ui::festive(),
                Ui::homeLayout() == Ui::HomeLayout::Rows ? "rows" : "grid", (int)Ui::libraryStyle(),
                (int)g_wiifin_disc_light, l, t, r, b, Ui::solidColors(), Ui::clock12h() ? "12h" : "24h",
                Lang::code(Lang::current()));
@@ -255,6 +265,8 @@ void App::saveSettings() {
     fprintf(f, "ssl_verify=%d\n",      jellyfinClient.sslVerify ? 1 : 0);
     fprintf(f, "music_enabled=%d\n",    musicEnabled ? 1 : 0);
     fprintf(f, "ui_sounds=%d\n",        SoundFX::enabled() ? 1 : 0);
+    fprintf(f, "music_autoplay=%d\n",   MusicSession::autoplay() ? 1 : 0);
+    fprintf(f, "skip_prompts=%d\n",     g_wiifin_skip_prompts ? 1 : 0);
     fprintf(f, "video_quality=%d\n",    jellyfinClient.videoQuality);
     fprintf(f, DIRECT_PLAY_KEY "=%d\n",  jellyfinClient.directPlay ? 1 : 0);
     /* WiiFin's own look: not the one of the profile open */
@@ -265,6 +277,7 @@ void App::saveSettings() {
     fprintf(f, "clock_12h=%d\n",        Ui::clock12h() ? 1 : 0);
     fprintf(f, "language=%s\n",         Lang::choiceKey());
     fprintf(f, "smooth_motion=%d\n",    g_wiifin_smooth_motion ? 1 : 0);
+    fprintf(f, "christmas=%d\n",        Ui::festive() ? 1 : 0);
     fprintf(f, "disc_light=%d\n",     g_wiifin_disc_light ? 1 : 0);
     fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());
 #ifdef __WIIU__

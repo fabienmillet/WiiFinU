@@ -33,6 +33,8 @@ s32  ASND_SetVoice(s32 voice, s32 format, s32 pitch, s32 delay, void* snd, s32 s
                    s32 volume_l, s32 volume_r, ASNDVoiceCallback callback);
 s32  ASND_SetInfiniteVoice(s32 voice, s32 format, s32 pitch, s32 delay, void* snd, s32 size_snd,
                            s32 volume_l, s32 volume_r);
+/* a voice set with a callback: its next block (SND_BUSY: one waits already) */
+s32  ASND_AddVoice(s32 voice, void* snd, s32 size_snd);
 s32  ASND_StopVoice(s32 voice);
 s32  ASND_PauseVoice(s32 voice, s32 pause);
 s32  ASND_StatusVoice(s32 voice);

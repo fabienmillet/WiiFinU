@@ -6,8 +6,10 @@
 #include "Ui.h"
 #include "../player/vo_wiifin.h"
 #include "../player/WiiPlayer.h"
+#include "../player/PlayerView.h"
 #include "../core/SoundFX.h"
 #include "../core/MusicBGM.h"
+#include "../core/MusicSession.h"
 #include "../core/Text.h"
 #include "../core/Lang.h"
 #include "../input/Input.h"
@@ -18,7 +20,8 @@
 
 /* The rows, by what they set (drawRow and activate take these) */
 enum Row { R_SSL, R_MUSIC, R_SOUNDS, R_QUALITY, R_DIRECT, R_SMOOTH, R_THEME, R_HOME, R_VIEW,
-           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_SCREENS, R_HD };
+           R_LIGHT, R_AREA, R_BACKGROUNDS, R_CLOCK, R_LANGUAGE, R_SIGNIN, R_CHRISTMAS, R_AUTOPLAY, R_SKIP,
+           R_SCREENS, R_HD };
 
 /* the sections: a profile's own look (WiiFin's menu: the start-up one,
  * theme and backgrounds only), what every profile shares, how a profile
@@ -75,10 +78,10 @@ void SettingsView::openSection(int s) {
     /* the Wii U: its two screens; HDMI (no TV area to fit), no disc slot
      * light, its own player (no frame blending) */
     else if (s == 1) rows = { R_SCREENS, R_HD, R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE,
-                              R_SSL, R_QUALITY, R_DIRECT };
+                              R_SSL, R_QUALITY, R_DIRECT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP };
 #else
     else if (s == 1) rows = { R_MUSIC, R_SOUNDS, R_CLOCK, R_LANGUAGE, R_AREA,
-                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT };
+                              R_SSL, R_QUALITY, R_DIRECT, R_SMOOTH, R_LIGHT, R_CHRISTMAS, R_AUTOPLAY, R_SKIP };
 #endif
     else rows = { R_SIGNIN };
     signInWant = profile ? profile->signIn : -1;
@@ -172,9 +175,9 @@ void SettingsView::activate(int index) {
         case 4: client.directPlay = !client.directPlay; break;
         case 5: g_wiifin_smooth_motion = !g_wiifin_smooth_motion; break;
         case 6:
-            Ui::setTheme(Ui::nextTheme(Ui::theme()));
+            Ui::setTheme(Ui::nextTheme(Ui::chosenTheme()));
             /* the Flix look is made for the rows of carousels */
-            if (Ui::theme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
+            if (Ui::chosenTheme() == Ui::Theme::Flix) Ui::setHomeLayout(Ui::HomeLayout::Rows);
             break;
         case 7:
             Ui::setHomeLayout(Ui::homeLayout() == Ui::HomeLayout::Rows ? Ui::HomeLayout::Grid
@@ -190,6 +193,9 @@ void SettingsView::activate(int index) {
         case 13:   /* the Wii's, then each language in turn */
             Lang::choose(Lang::next(Lang::choice()));
             break;
+        case R_CHRISTMAS: Ui::setFestive(!Ui::festive()); break;
+        case R_AUTOPLAY: MusicSession::setAutoplay(!MusicSession::autoplay()); break;
+        case R_SKIP: g_wiifin_skip_prompts = !g_wiifin_skip_prompts; break;
 #ifdef __WIIU__
         case R_SCREENS:
             PlatformWiiU::setScreens((PlatformWiiU::Screens)(((int)PlatformWiiU::screens() + 1) % 3));
@@ -446,8 +452,10 @@ void SettingsView::describeRows() {
             N_("Dark grey and orange"),
         };
         static const u32 themeCol[Ui::THEME_COUNT] = { 0x34A8DDFF, 0x45546BFF, 0xD81F26FF, 0x7DC242FF, 0xF47521FF };
-        int t = (int)Ui::theme();
-        drawRow(6, N_("Theme"), themeDesc[t], Ui::themeName(Ui::theme()), themeCol[t]);
+        int t = (int)Ui::chosenTheme();
+        drawRow(6, N_("Theme"), Ui::theme() == Ui::Theme::Christmas ? N_("Christmas for now, until January 6")
+                                                                   : themeDesc[t],
+                Ui::themeName(Ui::chosenTheme()), themeCol[t]);
     }
     {
         bool rows = Ui::homeLayout() == Ui::HomeLayout::Rows;
@@ -487,6 +495,18 @@ void SettingsView::describeRows() {
     drawRow(13, N_("Language"),
             Lang::choice() < 0 ? N_("The Wii's language, as set in the Wii Settings") : N_("Chosen here, whatever the Wii's language"),
             Lang::name(Lang::current()), Lang::choice() < 0 ? 0x8A9099FF : p.accent);
+    drawRow(R_CHRISTMAS, N_("Christmas"),
+            Ui::festive() ? N_("Snow and Christmas colours from December 1 to January 6")
+                          : N_("The chosen theme all year round"),
+            Ui::festive() ? N_("Auto") : N_("OFF"), Ui::festive() ? 0xD8343AFF : 0x8A9099FF);
+    drawRow(R_AUTOPLAY, N_("Music Autoplay"),
+            MusicSession::autoplay() ? N_("When an album or a playlist ends, similar songs follow")
+                                     : N_("The music stops at the end of the album or playlist"),
+            MusicSession::autoplay() ? N_("ON") : N_("OFF"), MusicSession::autoplay() ? p.ok : 0x8A9099FF);
+    drawRow(R_SKIP, N_("Skip Prompts"),
+            g_wiifin_skip_prompts ? N_("\"Skip intro\", \"Skip recap\"... over the parts the server knows")
+                                  : N_("Intros, recaps and credits play without a prompt"),
+            g_wiifin_skip_prompts ? N_("ON") : N_("OFF"), g_wiifin_skip_prompts ? p.ok : 0x8A9099FF);
     if (profile) {
         static const char* const how[3]  = { N_("Automatic"), N_("Passcode"), N_("Password") };
         static const char* const desc[3] = {

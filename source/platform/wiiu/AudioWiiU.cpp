@@ -6,6 +6,9 @@
  * callback mixes: the 16 voices (resampled from their own rate), the MP3
  * being played (decoded by libmad on a thread into a ring) and the
  * player's stream (already 48 kHz, its times kept to tell the clock).
+ * A voice set with a callback streams (the menus' music, decoded below the
+ * interface): it holds the block playing and one more (ASND_AddVoice); the
+ * callback, called from the mix while that second place is free, gives it.
  * Samples are the CPU's s16 (big-endian, as the Wii's ASND wants them).
  * ----------------------------------------------------------------------- */
 #include "AudioWiiU.h"
@@ -45,6 +48,10 @@ struct Voice {
     uint64_t step = 0;               /* 16.16, the voice's rate / 48 kHz */
     int      volL = 255, volR = 255;
     bool     on = false;
+    /* streaming: the callback, the block after the one playing */
+    ASNDVoiceCallback cb = nullptr;
+    const uint8_t* next = nullptr;
+    int      nextFrames = 0;
 };
 Voice s_voices[MAX_SND_VOICES];
 bool  s_asndPaused = false;
@@ -97,14 +104,28 @@ void mix(void*, Uint8* out8, int len)
     memset(acc, 0, sizeof(int32_t) * n * 2);
 
     if (!s_asndPaused) {
-        for (Voice& v : s_voices) {
+        for (int vi = 0; vi < MAX_SND_VOICES; ++vi) {
+            Voice& v = s_voices[vi];
             if (!v.on || v.paused || !v.data || v.frames <= 0) continue;
+            /* a streaming voice: its next block asked for (the callback
+             * calls ASND_AddVoice: the device's lock is the caller's) */
+            if (v.cb && !v.next) v.cb(vi);
             for (int i = 0; i < n; ++i) {
                 int idx = (int)(v.pos >> 16);
                 if (idx >= v.frames) {
-                    if (!v.loop) { v.on = false; break; }
-                    v.pos -= (uint64_t)v.frames << 16;
-                    idx = (int)(v.pos >> 16);
+                    if (v.cb && v.next) {
+                        v.pos -= (uint64_t)v.frames << 16;
+                        v.data = v.next;
+                        v.frames = v.nextFrames;
+                        v.next = nullptr;
+                        v.cb(vi);
+                        idx = (int)(v.pos >> 16);
+                        if (idx >= v.frames) { v.on = false; break; }
+                    } else if (!v.loop) { v.on = false; break; }
+                    else {
+                        v.pos -= (uint64_t)v.frames << 16;
+                        idx = (int)(v.pos >> 16);
+                    }
                 }
                 acc[i * 2]     += voiceSample(v, idx, 0) * v.volL / 255;
                 acc[i * 2 + 1] += voiceSample(v, idx, v.stereo ? 1 : 0) * v.volR / 255;
@@ -417,6 +438,8 @@ static s32 setVoice(s32 voice, s32 format, s32 pitch, void* snd, s32 size, s32 v
     v.pos = 0;
     v.step = ((uint64_t)pitch << 16) / AudioWiiU::RATE;
     v.volL = vl; v.volR = vr;
+    v.cb = nullptr;
+    v.next = nullptr;
     v.on = true;
     return SND_OK;
 }
@@ -424,8 +447,26 @@ static s32 setVoice(s32 voice, s32 format, s32 pitch, void* snd, s32 size, s32 v
 s32 ASND_SetVoice(s32 voice, s32 format, s32 pitch, s32 delay, void* snd, s32 size,
                   s32 vl, s32 vr, ASNDVoiceCallback cb)
 {
-    (void)delay; (void)cb;
-    return setVoice(voice, format, pitch, snd, size, vl, vr, false);
+    (void)delay;
+    const s32 r = setVoice(voice, format, pitch, snd, size, vl, vr, false);
+    if (r == SND_OK && cb) {
+        Lock l;
+        s_voices[voice].cb = cb;
+    }
+    return r;
+}
+
+/* a streaming voice's next block: taken if its place is free */
+s32 ASND_AddVoice(s32 voice, void* snd, s32 size)
+{
+    if (voice < 0 || voice >= MAX_SND_VOICES || !snd || size <= 0) return SND_INVALID;
+    Lock l;
+    Voice& v = s_voices[voice];
+    if (!v.on || !v.cb) return SND_INVALID;
+    if (v.next) return SND_BUSY;
+    v.next = (const uint8_t*)snd;
+    v.nextFrames = size / ((v.stereo ? 2 : 1) * (v.bits16 ? 2 : 1));
+    return SND_OK;
 }
 
 s32 ASND_SetInfiniteVoice(s32 voice, s32 format, s32 pitch, s32 delay, void* snd, s32 size,

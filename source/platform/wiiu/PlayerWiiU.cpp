@@ -64,6 +64,7 @@ int wiifin_cert_verify(void*, mbedtls_x509_crt*, int, uint32_t* flags);
 
 extern "C" {
 volatile float g_mplayer_time_pos = 0.0f;
+volatile float g_wiifin_audio_pos = 0.0f;   /* the sound heard (the music player's lyrics, its bar) */
 volatile float g_mplayer_duration = 0.0f;
 volatile int   g_mplayer_paused   = 0;
 volatile float g_wiifin_ss_secs = 0.0f;
@@ -1136,7 +1137,7 @@ void playMain()
 
             if (vIdx < 0) {
                 double t = audioClock();
-                if (t >= 0) g_mplayer_time_pos = (float)t;
+                if (t >= 0) g_mplayer_time_pos = g_wiifin_audio_pos = (float)t;
                 if (eof) {
                     if (audioQueuedFrames() == 0) break;
                     sleepMs(20);
@@ -1203,7 +1204,7 @@ void playMain()
                     /* the end: what sound is queued, heard */
                     if (s_audioOn && audioQueuedFrames() > 0) {
                         double t = audioClock();
-                        if (t >= 0) g_mplayer_time_pos = (float)t;
+                        if (t >= 0) g_mplayer_time_pos = g_wiifin_audio_pos = (float)t;
                         sleepMs(20);
                         continue;
                     }
@@ -1308,6 +1309,7 @@ void resetState()
     s_audioStop = false;
     g_player_stop_reason = PLAYER_STOP_EOF;
     g_mplayer_time_pos = 0.0f;
+    g_wiifin_audio_pos = 0.0f;
     g_mplayer_duration = 0.0f;
     g_mplayer_paused = 0;
     s_streamStart = -1.0f;
