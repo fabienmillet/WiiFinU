@@ -9,6 +9,7 @@
 #include "InputWiiU.h"
 
 #include <nn/swkbd.h>
+#include <gx2/context.h>
 #include <coreinit/filesystem.h>
 #include <coreinit/mcp.h>
 #include <coreinit/userconfig.h>
@@ -192,14 +193,21 @@ void calc()
     }
 }
 
+/* drawn with no context state of ours (as SDL2 does: the keyboard sets its
+ * own state, which would be kept in WHBGfx's otherwise); the next screen's
+ * pass sets its own again */
 void drawTV()
 {
-    if (s_created && nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden) nn::swkbd::DrawTV();
+    if (!s_created || nn::swkbd::GetStateInputForm() == nn::swkbd::State::Hidden) return;
+    GX2SetContextState(nullptr);
+    nn::swkbd::DrawTV();
 }
 
 void drawDRC()
 {
-    if (s_created && nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden) nn::swkbd::DrawDRC();
+    if (!s_created || nn::swkbd::GetStateInputForm() == nn::swkbd::State::Hidden) return;
+    GX2SetContextState(nullptr);
+    nn::swkbd::DrawDRC();
 }
 
 }
