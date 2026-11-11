@@ -74,6 +74,8 @@ const Rect R_HERE  = { 452, 14, 260, 40 };
 /* the bottom: the TV screen's buttons */
 const float HINT_Y = 418, HINT_H = 48, HINT_X0 = 24, HINT_X1 = 830;
 
+bool playing();
+
 /* the TV screen's hints as buttons: a button's Wii name, its label */
 struct HintKey { const char* button; const char* label; };
 HintKey s_hints[8];
@@ -92,6 +94,12 @@ void gatherHints()
         }
         if (!InputWiiU::buttonOf(h.button)) continue;
         s_hints[s_nHints++] = { h.button, h.label };
+    }
+    /* a video whose controls are hidden on the TV: the player's buttons */
+    if (s_nHints == 0 && playing()) {
+        static const HintKey PLAYER[] = { { "1", N_("Audio") }, { "2", N_("Subtitles") },
+                                          { "+!", N_("Zoom") }, { "B", N_("Back") } };
+        for (const HintKey& k : PLAYER) s_hints[s_nHints++] = k;
     }
 }
 
