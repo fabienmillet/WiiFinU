@@ -46,3 +46,14 @@ libs/ffmpeg-3ds/
 libs/mbedtls/lib3ds/
 tools/3ds/test/out/
 tools/3ds/test/out-cfg.txt
+
+# Wii U build
+buildwiiu/
+WiiFin.rpx
+WiiFin.wuhb
+WiiFin.wiiu.elf
+WiiFin.wiiu.map
+libs/ffmpeg-wiiu/
+libs/mbedtls/libwiiu/
+tools/wiiu/test/out/
+tools/wiiu/test/out-cfg/

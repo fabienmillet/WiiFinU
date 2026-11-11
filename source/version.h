@@ -9,6 +9,12 @@
 #endif
 #define WIIFIN_CLIENT_NAME APP_NAME
 #define WIIFIN_DEVICE_NAME "Nintendo 3DS"
+#elif defined(__WIIU__)
+#ifndef APP_NAME
+#define APP_NAME "WiiFin U"
+#endif
+#define WIIFIN_CLIENT_NAME APP_NAME
+#define WIIFIN_DEVICE_NAME "Nintendo Wii U"
 #else
 #define WIIFIN_CLIENT_NAME "WiiFin"
 #define WIIFIN_DEVICE_NAME "Nintendo Wii"

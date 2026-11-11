@@ -46,8 +46,8 @@ private:
     void runOnboarding(SavedProfile& p);
     /* the passcode of a profile asked; false: B (or power) */
     bool askPasscode(const SavedProfile& p);
-#ifdef __3DS__
-    bool screenAreaAsked = true;       // the 3DS: no TV to fit
+#if defined(__3DS__) || defined(__WIIU__)
+    bool screenAreaAsked = true;       // the 3DS: no TV to fit; the Wii U: HDMI
 #else
     bool screenAreaAsked = false;      // first-launch offer to fit the TV made
 #endif

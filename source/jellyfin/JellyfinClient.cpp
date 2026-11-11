@@ -3,6 +3,9 @@
 #ifdef __3DS__
 #include "Platform3ds.h"
 #endif
+#ifdef __WIIU__
+#include <coreinit/thread.h>
+#endif
 #include <algorithm>
 #include "../core/ExitZone.h"
 #include "../core/Lang.h"
@@ -682,9 +685,17 @@ TlsShared s_tls;
 /* The connections: one on the Wii.  On the 3DS the posters' loaders have
  * their own (JellyfinClient::setThreadConnection), so a page's list isn't
  * waiting behind them, nor they behind it. */
-#ifdef __3DS__
+#if defined(__3DS__)
 const int CONN_SLOTS = 3;
 __thread int t_slot = 0;
+#elif defined(__WIIU__)
+/* no thread-local variables on the Wii U (wut): coreinit's thread values */
+const int CONN_SLOTS = 3;
+struct ThreadSlot {
+    operator int() const { return (int)(uintptr_t)OSGetThreadSpecific(OS_THREAD_SPECIFIC_0); }
+    ThreadSlot& operator=(int v) { OSSetThreadSpecific(OS_THREAD_SPECIFIC_0, (void*)(uintptr_t)v); return *this; }
+};
+ThreadSlot t_slot;
 #else
 const int CONN_SLOTS = 1;
 const int t_slot = 0;
@@ -833,7 +844,7 @@ bool openConn(bool tls, const struct sockaddr_in& addr, const std::string& host,
     s32 sock = net_socket(AF_INET, SOCK_STREAM, 0);
     s_lastSocketErr = sock < 0 ? sock : 0;
     if (sock < 0) { err = "socket() failed (" + std::to_string(sock) + ")"; return false; }
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     {   /* a bigger receive window: the 3DS's default is small */
         int rcv = 256 * 1024;
         net_setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv, sizeof(rcv));
@@ -998,7 +1009,7 @@ ExResult exchange(const char* req, int reqLen, const std::string& body, bool reu
     bool complete   = false;
     keepAlive = true;
 
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     /* bigger reads: each one is a call to the system's sockets */
     const size_t READ = 16384;
     std::unique_ptr<unsigned char[]> bufMem(new unsigned char[READ]);
@@ -1088,7 +1099,7 @@ mbedtls_x509_crt* wiifin_ca_chain() {
 
 void JellyfinClient::setThreadConnection(int slot) {
     connLockInit();
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     t_slot = slot >= 0 && slot < CONN_SLOTS ? slot : 0;
 #else
     (void)slot;
@@ -2628,6 +2639,34 @@ const int MAX_FPS = 30;
 int maxChannels(const std::string&, const struct DirectFormat*) { return 2; }
 /* its Wi-Fi (802.11g) */
 const int MAX_DIRECT_BPS = 2500000;
+#elif defined(__WIIU__)
+/* The Wii U: FFmpeg on its three 1.24 GHz cores (H.264 on all three), the
+ * picture drawn by its GPU (NV12).  Everything goes through FFmpeg's
+ * demuxers (so an audio track is its rank, whatever the file); its sound
+ * is mixed down to stereo. */
+const DirectFormat FORMATS[] = {
+    { "avi",            "lavf:avi",      "mpeg4,h264,mpeg1video,mpeg2video", "mp3,mp2,ac3,aac" },
+    { "mkv,webm",       "lavf:matroska", "mpeg4,h264,mpeg1video,mpeg2video", "mp3,mp2,ac3,eac3,aac,vorbis,opus,flac" },
+    { "mp4,m4v,mov",    "lavf:mov",      "mpeg4,h264",                       "aac,mp3,ac3,eac3" },
+    { "ts,mpegts,m2ts", "lavf:mpegts",   "mpeg2video,h264,mpeg4",            "mp2,mp3,ac3,eac3,aac" },
+    { "mpeg,mpg,vob",   "lavf:mpegps",   "mpeg1video,mpeg2video",            "mp2,mp3,ac3" },
+};
+struct VideoLimit {
+    const char* codecs;
+    int width, height;
+    int level;      /* 0: none */
+    int bitrate;    /* 0: none */
+};
+/* cautious (software decoding), to widen with a console */
+const VideoLimit VIDEO_LIMITS[] = {
+    { "mpeg4,mpeg1video,mpeg2video", 854, 576, 0,  6000000 },
+    { "h264",                        854, 480, 31, 3000000 },
+};
+const int MAX_FPS = 30;
+void fitLimitsToConsole() {}
+int maxChannels(const std::string&, const struct DirectFormat*) { return 6; }
+/* its Wi-Fi (802.11n) */
+const int MAX_DIRECT_BPS = 10000000;
 #else
 const DirectFormat FORMATS[] = {
     { "avi",            "avi",    "mpeg4,h264,mpeg1video,mpeg2video",     "mp3,mp2,ac3,aac" },
@@ -2710,6 +2749,12 @@ std::string directProfile() {
         if (v.bitrate) s += "," + condition("VideoBitrate", v.bitrate, false);
         s += "]},";
     }
+#ifdef __WIIU__
+    /* the Wii U: any of them, down to stereo by FFmpeg */
+    s += "{\"Type\":\"VideoAudio\",\"Codec\":\"mp3,mp2,aac,ac3,eac3,vorbis,opus,flac\",\"Conditions\":[" +
+         condition("AudioChannels", 6, false) + "]}],\"SubtitleProfiles\":[]";
+    return s;
+#endif
     s += "{\"Type\":\"VideoAudio\",\"Codec\":\"mp3,mp2,aac,vorbis,flac\",\"Conditions\":[" +
          condition("AudioChannels", 2, false) + "]},"
          "{\"Type\":\"VideoAudio\",\"Codec\":\"ac3\",\"Conditions\":[" +
@@ -2924,6 +2969,11 @@ bool JellyfinClient::getTranscodingUrl(const std::string& serverUrl,
     #define WIIFIN_MAX_W "400"
     #define WIIFIN_MAX_H "240"
     static const int AUDIO_BPS = 96000;
+#elif defined(__WIIU__)
+    /* the Wii U: 480 lines, 16:9 (the GamePad's own size) */
+    #define WIIFIN_MAX_W "854"
+    #define WIIFIN_MAX_H "480"
+    static const int AUDIO_BPS = 160000;
 #else
     #define WIIFIN_MAX_W "640"
     #define WIIFIN_MAX_H "480"

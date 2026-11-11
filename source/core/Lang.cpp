@@ -69,8 +69,8 @@ void update() {
 
 } // namespace
 
-#ifdef __3DS__
-/* The 3DS says "the console" where the Wii's interface says "the Wii": its
+#if defined(__3DS__) || defined(__WIIU__)
+/* The 3DS and the Wii U say "the console" where the Wii's interface says "the Wii": its
  * own English, translated in turn (the lang folder) */
 static const char* forThe3ds(const char* en)
 {
@@ -118,7 +118,7 @@ static const char* forThe3ds(const char* en)
 
 const char* tr(const char* en)
 {
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     if (en && *en) en = forThe3ds(en);
 #endif
     if (s_current <= 0 || !en || !*en) return en;

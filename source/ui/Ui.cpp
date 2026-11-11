@@ -1,6 +1,9 @@
 #include "Ui.h"
 #include "../core/Text.h"
 #include "../core/Lang.h"
+#ifdef __WIIU__
+#include "../platform/wiiu/GfxWiiU.h"
+#endif
 
 #include <gccore.h>
 #include <math.h>
@@ -366,6 +369,10 @@ void initScreen(bool widescreen)
     /* the 3DS: the frame is drawn at half size on its screens (both of
      * them: the top one's 800x480 space too), glyphs rasterised for that */
     Text::setFrameMapping(-s_off, 0.5f * 640.0f / (640.0f + 2.0f * s_off), 0.5f);
+#elif defined(__WIIU__)
+    /* the Wii U: square pixels, 1.5 a unit on a 720p TV, 1 on the GamePad
+     * (GfxWiiU maps it again when the screens change) */
+    Text::setFrameMapping(-s_off, GfxWiiU::mainScale(), GfxWiiU::mainScaleY());
 #else
     Text::setFrameMapping(-s_off, 640.0f / (640.0f + 2.0f * s_off));
 #endif
@@ -499,8 +506,8 @@ static void dpadGlyph(float cx, float cy, bool vertical, u32 c)
 }
 
 /* Width of the glyph drawn for a hint button (0 = label only). */
-#ifdef __3DS__
-static ButtonStyle s_buttonStyle = ButtonStyle::GameCube;   /* the 3DS's names from the start */
+#if defined(__3DS__) || defined(__WIIU__)
+static ButtonStyle s_buttonStyle = ButtonStyle::GameCube;   /* the console's names from the start */
 #else
 static ButtonStyle s_buttonStyle = ButtonStyle::WiiRemote;
 #endif
@@ -519,6 +526,14 @@ const char* buttonName(const char* b)
 #ifdef __3DS__
     /* Z: ZL / ZR on a New 3DS, SELECT on any */
     if (strcmp(b, "+!") == 0) return "SELECT";
+#endif
+#ifdef __WIIU__
+    /* the GamePad's (and the Pro Controller's) names: + opens WiiFin's
+     * menu (HOME is the system's), ZR (or ZL, -) the zoom */
+    if (s_buttonStyle == ButtonStyle::GameCube) {
+        if (strcmp(b, "+!") == 0) return "ZR";
+        if (strcmp(b, "HOME") == 0) return "+";
+    }
 #endif
     if (strcmp(b, "+!") == 0) return s_buttonStyle == ButtonStyle::GameCube ? "Z" : "+";
     if (s_buttonStyle == ButtonStyle::WiiRemote) return b;
@@ -542,7 +557,7 @@ static void buttonDisc(float cx, float cy, const char* b, u32& textColor)
     const Palette& p = pal();
     u32 fill = p.cardTop;
     textColor = p.text;
-#ifndef __3DS__   /* the 3DS's A and B are grey */
+#if !defined(__3DS__) && !defined(__WIIU__)   /* the 3DS's and the Wii U's A and B are grey */
     if (s_buttonStyle == ButtonStyle::GameCube && (b[0] == 'A' || b[0] == 'B') && !b[1]) {
         fill = b[0] == 'A' ? 0x2FB56AFF : 0xD8463CFF;
         textColor = 0xFFFFFFFF;
@@ -576,7 +591,7 @@ static void plusGlyph(float cx, float cy, u32 c)
     roundRect(cx - 1.25f, cy - 4.5f, 2.5f, 9, 1.25f, c);
 }
 
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
 /* The hints drawn lately, where: a tap on one is its button (the touch
  * screen alone, without a gamepad) */
 static struct HintSpot { float x0, x1, y0, y1; const char* button; u64 at; } s_spots[32];
@@ -601,7 +616,7 @@ float hint(float x, float y, const Hint& h)
     const Palette& p = pal();
     const char* b = buttonName(h.button);
     float cy = y + 9, w = glyphWidth(b);
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     {
         const float total = hintWidth(h);
         if (strcmp(h.button, "-/+") == 0) { spot(x, x + 20, y, "-"); spot(x + 20, x + total, y, "+"); }

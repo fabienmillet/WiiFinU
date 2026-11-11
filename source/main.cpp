@@ -5,10 +5,16 @@
 #ifdef __3DS__
 #include "platform/3ds/Platform3ds.h"
 #endif
+#ifdef __WIIU__
+#include "platform/wiiu/PlatformWiiU.h"
+#endif
 
 int main(int argc, char* argv[]) {
 #ifdef __3DS__
     Platform3ds::init();
+#endif
+#ifdef __WIIU__
+    PlatformWiiU::init();
 #endif
     Log::init();
     SYS_Report("[DBG] main thread self=%p\n", (void*)(uintptr_t)LWP_GetSelf());

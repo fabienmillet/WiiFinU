@@ -1,4 +1,7 @@
 /* App settings and saved profiles: sd:/apps/WiiFin/wiifin.cfg */
+#ifdef __WIIU__
+#include "../platform/wiiu/PlatformWiiU.h"
+#endif
 #include "App.h"
 #include "../ui/Ui.h"
 #include "Utils.h"
@@ -107,6 +110,12 @@ void App::loadSettings() {
             g_wiifin_disc_light = atoi(val) != 0;
         } else if (strcmp(key, "video_zoom") == 0) {
             VideoSurface::setZoom(atoi(val) == 1 ? VideoSurface::Zoom::Fill : VideoSurface::Zoom::Fit);
+#ifdef __WIIU__
+        } else if (strcmp(key, "wiiu_screens") == 0) {
+            const int v = atoi(val);
+            PlatformWiiU::setScreens(v == 1 ? PlatformWiiU::Screens::TV
+                                     : v == 2 ? PlatformWiiU::Screens::GamePad : PlatformWiiU::Screens::Auto);
+#endif
         } else if (strcmp(key, "library_view") == 0) {
             int v = atoi(val);
             if (v >= 0 && v < Ui::LIBRARY_STYLE_COUNT) Ui::setLibraryStyle((Ui::LibraryStyle)v);
@@ -255,6 +264,9 @@ void App::saveSettings() {
     fprintf(f, "smooth_motion=%d\n",    g_wiifin_smooth_motion ? 1 : 0);
     fprintf(f, "disc_light=%d\n",     g_wiifin_disc_light ? 1 : 0);
     fprintf(f, "video_zoom=%d\n",       (int)VideoSurface::zoom());
+#ifdef __WIIU__
+    fprintf(f, "wiiu_screens=%d\n",     (int)PlatformWiiU::screens());
+#endif
     {
         int l, t, r, b;
         Ui::safeArea(l, t, r, b);

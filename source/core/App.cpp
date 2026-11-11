@@ -21,6 +21,10 @@
 #include "../platform/3ds/ui/Welcome3ds.h"
 #include "../platform/3ds/ui/Ui3ds.h"
 #endif
+#ifdef __WIIU__
+#include "../platform/wiiu/GfxWiiU.h"
+#include "../platform/wiiu/PlatformWiiU.h"
+#endif
 #include "../jellyfin/JellyfinClient.h"
 #include "../jellyfin/RemoteControl.h"
 
@@ -134,7 +138,7 @@ bool showErrorScreen(const char* title, const std::string& line1,
         Ui::text(138, 170, title, 20, p.danger);
         Ui::text(100, 210, line1.c_str(), 15, p.text);
         Ui::text(100, 236, line2.c_str(), 13, p.textDim);
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
         Ui::textRight(546, 258, APP_NAME " v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
 #else
         Ui::textRight(546, 258, "WiiFin v" WIIFIN_VERSION, 11, p.textDim);   /* for bug reports */
@@ -195,7 +199,7 @@ void App::init(const char* argv0) {
 
     SYS_Report("[WiiFin] init start\n");
 
-#ifndef __3DS__   /* the 3DS: Platform3ds::init (main) set up the GPU */
+#if !defined(__3DS__) && !defined(__WIIU__)   /* the 3DS, the Wii U: their Platform::init (main) set up the GPU */
     {
         VIDEO_Init();
         SYS_Report("[WiiFin] VIDEO_Init done\n");
@@ -247,6 +251,9 @@ void App::init(const char* argv0) {
 #else
     cursorPointerTex    = GRRLIB_LoadTexture(data_cursors_PointerP1_64_png);
 #endif
+#ifdef __WIIU__
+    GfxWiiU::setCursorTexture(cursorPointerTex);   /* not drawn under a finger */
+#endif
     font   = GRRLIB_LoadTTF(wii_font_ttf, wii_font_ttf_len);
     jpFont = GRRLIB_LoadTTF(jp_font_ttf, jp_font_ttf_len);
     Text::setFallback(jpFont);   /* Japanese titles, subtitles... in any text */
@@ -289,6 +296,12 @@ void App::init(const char* argv0) {
     argvPath.clear();
     const char* probes[] = {
         "sdmc:/3ds/WiiFin/wiifin.cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    };
+#elif defined(__WIIU__)
+    /* the Wii U: its folder next to the apps (the .wuhb sits in wiiu/apps/) */
+    argvPath.clear();
+    const char* probes[] = {
+        "fs:/vol/external01/wiiu/apps/WiiFin/wiifin.cfg", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
     };
 #else
     const char* probes[] = {
@@ -434,9 +447,9 @@ void App::loadSdFonts(const std::string& dir)
 /* First launch: CRT TVs cut the edges of the picture (overscan) and their
  * owners rarely find Settings > Screen Area by themselves.  Offered once. */
 void App::offerScreenCalibration(ir_t& ir) {
-#ifdef __3DS__
+#if defined(__3DS__) || defined(__WIIU__)
     (void)ir;
-    screenAreaAsked = true;   /* the 3DS: no TV */
+    screenAreaAsked = true;   /* the 3DS: no TV; the Wii U: HDMI */
     return;
 #endif
     int l, t, r, b;
@@ -959,9 +972,9 @@ void App::loop() {
     GRRLIB_Exit();
     ConnectView::shutdownUsbKeyboard();
     WPAD_Shutdown();
-#ifdef __3DS__
-    /* back to the Homebrew Launcher (the 3DS's HOME menu and power button
-     * are the system's) */
+#if defined(__3DS__) || defined(__WIIU__)
+    /* back to the Homebrew Launcher / the Wii U Menu (the consoles' HOME
+     * menus and power buttons are the system's) */
     net_deinit();
     return;
 #else
