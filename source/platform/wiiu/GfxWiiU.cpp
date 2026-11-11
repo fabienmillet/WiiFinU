@@ -961,6 +961,14 @@ void GRRLIB_Render(void)
         return;
     }
     recordRemote();
+    {   /* (the log) the busiest frame so far: draws and vertices */
+        static size_t s_maxBatches = 0;
+        const size_t n = s_main.size() + s_remote.size();
+        if (n > s_maxBatches + s_maxBatches / 4 + 50) {
+            s_maxBatches = n;
+            SYS_Report("[GfxWiiU] busiest frame so far: %u draws, %d vertices\n", (unsigned)n, s_vcount);
+        }
+    }
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, s_vbuf, s_vcount * sizeof(Vtx));
     SwkbdWiiU::calc();
 

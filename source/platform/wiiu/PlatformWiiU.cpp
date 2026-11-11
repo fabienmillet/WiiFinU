@@ -24,12 +24,14 @@
 #include "../../jellyfin/RemoteControl.h"
 
 #include <avm/tv.h>
+#include <coreinit/energysaver.h>
 #include <tve/tve.h>
 #include <coreinit/time.h>
 #include <ogc/system.h>
 #include <ogc/pad.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <string>
@@ -394,6 +396,8 @@ void applyScreens()
     GfxWiiU::setMode(tv ? GfxWiiU::Mode::Remote : GfxWiiU::Mode::Mirror);
 }
 
+void keepAwake(bool video, bool playing);
+
 /* once a frame (the render hook): L3 + R3, a TV plugged or unplugged */
 void (*s_prevBeforeRender)() = nullptr;
 void beforeRender()
@@ -417,8 +421,38 @@ void beforeRender()
             if (s_screens == PlatformWiiU::Screens::Auto) applyScreens();
         }
     }
+    {
+        const bool video = PlayerWiiU::videoActive() && !g_mplayer_paused;
+        const char* np = Ui::nowPlaying();
+        keepAwake(video, video || (np && *np));
+    }
     if (s_prevBeforeRender) s_prevBeforeRender();
 }
+
+/* The screens stay lit while a video plays, and the console on while
+ * something plays (its auto power-down otherwise: an hour without a
+ * button); the system's choices back after */
+uint32_t s_dimWas = 1, s_apdWas = 1;
+bool s_imRead = false, s_dimOff = false, s_apdOff = false;
+void keepAwake(bool video, bool playing)
+{
+    if (!s_imRead) {
+        IMIsDimEnabled(&s_dimWas);
+        IMIsAPDEnabled(&s_apdWas);
+        s_imRead = true;
+    }
+    if (video != s_dimOff) {
+        if (video) IMDisableDim();
+        else if (s_dimWas) IMEnableDim();
+        s_dimOff = video;
+    }
+    if (playing != s_apdOff) {
+        if (playing) IMDisableAPD();
+        else if (s_apdWas) IMEnableAPD();
+        s_apdOff = playing;
+    }
+}
+void restoreAwake() { keepAwake(false, false); }
 
 /* The HOME menu: a video pauses (as the Wii's HOME menu does) */
 bool s_pausedForHome = false;
@@ -458,6 +492,9 @@ void init()
     GfxWiiU::setForegroundHook(onForeground);
     s_prevBeforeRender = g_wiifin_before_render;
     g_wiifin_before_render = beforeRender;
+    /* a video app: the system's longer auto power-down; ours back at exit */
+    IMStartAPDVideoMode();
+    atexit(restoreAwake);
     AudioWiiU::init();
 }
 
