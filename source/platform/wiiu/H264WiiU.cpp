@@ -11,6 +11,7 @@
 #include "GfxWiiU.h"
 
 #include <h264/decode.h>
+#include <coreinit/dynload.h>
 #include <coreinit/cache.h>
 #include <malloc.h>
 #include <string.h>
@@ -231,6 +232,24 @@ bool next(TexWiiU*& y, TexWiiU*& uv, double& pts)
 }
 
 unsigned decoded() { return s_decoded; }
+
+bool emulated()
+{
+    static int s_emulated = -1;
+    if (s_emulated < 0) {
+        OSDynLoad_Module m = nullptr;
+        void* f = nullptr;
+        /* a function that exists nowhere: the console's loader says so,
+         * Cemu's gives anything asked for (a stub that logs "Unsupported
+         * lib call") */
+        const bool real = OSDynLoad_Acquire("h264.rpl", &m) == OS_DYNLOAD_OK &&
+                          !(OSDynLoad_FindExport(m, OS_DYNLOAD_EXPORT_FUNC, "WiiFinNoSuchExport", &f) == OS_DYNLOAD_OK && f);
+        if (m) OSDynLoad_Release(m);
+        s_emulated = real ? 0 : 1;
+        SYS_Report("[H264WiiU] %s\n", real ? "the console's decoder" : "an emulator's decoder (Cemu): FFmpeg's instead");
+    }
+    return s_emulated == 1;
+}
 
 void inUse(TexWiiU* shown, TexWiiU* next) { s_avoid[0] = shown; s_avoid[1] = next; }
 

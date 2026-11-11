@@ -38,9 +38,9 @@ const float BAR_H = 64, FOOT_Y = 440;
 const float X0 = 24;                                   /* the rows' left edge */
 const float P_W = 96, P_H = 144;                       /* home rows: posters */
 const float L_W = 208, L_H = 117;                      /* ... libraries */
-const float TILE_GAP = 16, ROW_TITLE = 30, ROW_GAP = 30;
+const float TILE_GAP = 18, ROW_TITLE = 38, ROW_GAP = 36;
 const int   G_COLS = 6;
-const float G_W = 112, G_H = 168, G_GAP = 18, G_ROW = G_H + 38;   /* grids */
+const float G_W = 112, G_H = 168, G_GAP = 18, G_ROW = G_H + 44;   /* grids */
 const float CHIP_H = 36, EP_ROW = 84;                  /* series */
 const float TR_ROW = 44;                               /* an album's tracks */
 
@@ -113,21 +113,32 @@ void badges(const JellyfinItem& it, float x, float y, float w, float h)
 }
 
 /* a tile: the item's picture (or its title on a card while it loads),
- * in the Wii U's frame; focus grows it a little */
+ * in the Wii U's frame, lit when focused (its size stays: nothing drawn
+ * over its neighbours) */
 void tile(const JellyfinItem& it, float x, float y, float w, float h, bool focus, Kind kind = Kind::Poster)
 {
     const Ui::Palette& p = Ui::pal();
-    if (focus) { x -= w * 0.04f; y -= h * 0.04f; w *= 1.08f; h *= 1.08f; }
     const float r = w > 150 ? 10 : 8;
     GRRLIB_texImg* tex = ImagesWiiU::get(kind == Kind::Thumb ? it : posterOf(it), kind);
     tileFrame(x, y, w, h, r, focus ? 1.0f : 0.0f);
     if (tex) image(tex, x, y, w, h, r);
     else {
-        Ui::roundRect(x, y, w, h, r, p.cardTop, p.cardBottom);
+        Ui::roundRect(x, y, w, h, r, p.cardTop);
         const int size = w > 150 ? 18 : 13;
         paragraph(x + 8, y + 8, w - 16, captionOf(it), size, p.textDim, (int)((h - 16) / (size * 1.3f)));
     }
     badges(it, x, y, w, h);
+}
+
+/* a line of text centred under a tile, kept inside the screen (width sw) */
+void caption(float cx, float y, const std::string& s, int size, u32 color, float maxW, float sw)
+{
+    const std::string t = ellipsize(s, size, maxW);
+    const float w = textW(t, size);
+    float x = cx - w / 2;
+    if (x + w > sw - 8) x = sw - 8 - w;
+    if (x < 8) x = 8;
+    text(x, y, t, size, color);
 }
 
 /* the axis a drag goes along, decided as it starts */
@@ -760,7 +771,7 @@ int BrowseWiiU::drawBar(Page& p)
 {
     const Ui::Palette& pal = Ui::pal();
     /* a light band, its line under it */
-    gradient(0, 0, PW, BAR_H, Ui::alpha(pal.barTop, 0.9f), Ui::alpha(pal.barBottom, 0.9f));
+    rect(0, 0, PW, BAR_H, Ui::alpha(pal.barTop, 0.95f));
     rect(0, BAR_H - 2, PW, 2, pal.barBorder);
     const bool home = p.type == Type::Home;
     int tapped = -2;
@@ -779,7 +790,7 @@ int BrowseWiiU::drawBar(Page& p)
                                         : p.title;
     if (home) {
         logo(x, BAR_H / 2, 36);
-        if (!userName.empty()) textR(right - 8, (BAR_H - 18) / 2 - 1, userName, 18, pal.textDim);
+        if (!userName.empty()) textR(right - 8, (BAR_H - 18) / 2 - 1, ellipsize(userName, 18, 220), 18, pal.textDim);
     } else {
         text(x, (BAR_H - 24) / 2 - 2, title, 24, pal.text, right - x - 8);
     }
@@ -794,7 +805,7 @@ int BrowseWiiU::drawBar(Page& p)
 void BrowseWiiU::drawFooter(Page& p)
 {
     const Ui::Palette& pal = Ui::pal();
-    gradient(0, FOOT_Y, PW, PH - FOOT_Y, Ui::alpha(pal.barTop, 0.9f), Ui::alpha(pal.barBottom, 0.9f));
+    rect(0, FOOT_Y, PW, PH - FOOT_Y, Ui::alpha(pal.barTop, 0.95f));
     rect(0, FOOT_Y, PW, 2, pal.barBorder);
     Hint h[4];
     int n = 0;
@@ -830,16 +841,14 @@ void BrowseWiiU::drawHome(Page& p)
                 const JellyfinItem& it = row.items[i];
                 if (row.libraries) {
                     tile(it, x, y + ROW_TITLE, w, h, focus, Kind::Thumb);
-                    /* its name on it */
-                    gradient(x, y + ROW_TITLE + h - 34, w, 34, 0x00000000, 0x000000B0);
-                    textC(x + w / 2, y + ROW_TITLE + h - 25, it.name, 15, 0xFFFFFFFF, w - 12);
+                    caption(x + w / 2, y + ROW_TITLE + h + 14, it.name, 14, focus ? pal.text : pal.textDim, w, PW);
                 } else if (isSquare(it)) {
                     tile(it, x, y + ROW_TITLE + h - w, w, w, focus);
                 } else {
                     tile(it, x, y + ROW_TITLE, w, h, focus);
                 }
                 if (focus && !row.libraries)
-                    textC(x + w / 2, y + ROW_TITLE + h + 8, captionOf(it), 13, pal.text, w + 60);
+                    caption(x + w / 2, y + ROW_TITLE + h + 14, captionOf(it), 13, pal.text, w + 80, PW);
             }
         }
         y += ROW_TITLE + h + ROW_GAP;
@@ -861,7 +870,7 @@ void BrowseWiiU::drawGrid(Page& p)
         const bool sq = isSquare(it);
         const float th = sq ? G_W : G_H, ty = y + (G_H - th);
         tile(it, x, ty, G_W, th, i == p.sel);
-        textC(x + G_W / 2, y + G_H + 9, captionOf(it), 13, i == p.sel ? pal.text : pal.textDim, G_W + G_GAP - 4);
+        caption(x + G_W / 2, y + G_H + 15, captionOf(it), 13, i == p.sel ? pal.text : pal.textDim, G_W + G_GAP - 4, PW);
     }
     clipOff();
     if (p.items.empty() && !p.loading)
@@ -877,7 +886,7 @@ void BrowseWiiU::drawSeries(Page& p)
     for (int i = 0; i < (int)p.seasons.size(); ++i) {
         const float w = textW(p.seasons[i].name, 16) + 32;
         const bool on = i == p.season;
-        Ui::roundRect(cx, chipsY, w, CHIP_H, CHIP_H / 2, on ? pal.accent : pal.cardTop, on ? pal.accentDark : pal.cardBottom);
+        Ui::roundRect(cx, chipsY, w, CHIP_H, CHIP_H / 2, on ? pal.accent : pal.cardTop);
         Ui::roundBorder(cx, chipsY, w, CHIP_H, CHIP_H / 2, 1.5f, on ? pal.accentDark : pal.cardBorder);
         text(cx + 16, chipsY + (CHIP_H - 16) / 2 - 1, p.seasons[i].name, 16, on ? pal.textOnAccent : pal.text);
         cx += w + 8;
@@ -896,7 +905,7 @@ void BrowseWiiU::drawSeries(Page& p)
         GRRLIB_texImg* tex = ImagesWiiU::get(it, Kind::Thumb);
         const float tx = X0, ty = y + 8, tw = 120, th = 68;
         if (tex) image(tex, tx, ty, tw, th, 6);
-        else Ui::roundRect(tx, ty, tw, th, 6, pal.cardTop, pal.cardBottom);
+        else Ui::roundRect(tx, ty, tw, th, 6, pal.cardTop);
         char b[220];
         snprintf(b, sizeof(b), "%d. %s", e.indexNumber, e.name.c_str());
         text(tx + tw + 16, y + 16, b, 18, pal.text, PW - (tx + tw + 16) - 56);
@@ -922,7 +931,7 @@ void BrowseWiiU::drawDetail(Page& p)
         GRRLIB_texImg* tex = ImagesWiiU::get(posterOf(it), Kind::Poster);
         tileFrame(x, y, w, h, 10, 0);
         if (tex) image(tex, x, y, w, h, 10);
-        else Ui::roundRect(x, y, w, h, 10, pal.cardTop, pal.cardBottom);
+        else Ui::roundRect(x, y, w, h, 10, pal.cardTop);
         if (d.runtimeTicks > 0 && d.playbackPositionTicks > 0)
             progress(x + 8, y + h - 12, w - 16, (float)d.playbackPositionTicks / d.runtimeTicks);
     }
@@ -988,11 +997,14 @@ void BrowseWiiU::drawTracks(Page& p)
     if (!dual) {   /* the cover beside the buttons (the TV shows it big) */
         GRRLIB_texImg* tex = ImagesWiiU::get(p.item, Kind::Poster);
         if (tex) image(tex, X0, BAR_H + 8, 56, 56, 6);
-        else Ui::roundRect(X0, BAR_H + 8, 56, 56, 6, pal.cardTop, pal.cardBottom);
+        else Ui::roundRect(X0, BAR_H + 8, 56, 56, 6, pal.cardTop);
     }
     button(bx, BAR_H + 12, 180, 44, tr("Play"), 17, 0, true, Icon::Play, true);
     button(bx + 192, BAR_H + 12, 180, 44, tr("Shuffle"), 17, 0, false, Icon::Shuffle, true);
-    if (!p.item.artist.empty()) textR(PW - X0, BAR_H + 26, p.item.artist, 15, pal.textDim);
+    if (!p.item.artist.empty()) {
+        const float room = PW - X0 - (bx + 192 + 180 + 16);
+        textR(PW - X0, BAR_H + 26, ellipsize(p.item.artist, 15, room), 15, pal.textDim);
+    }
     clip(0, listY, PW, FOOT_Y - listY);
     for (int i = 0; i < (int)p.tracks.size(); ++i) {
         const float y = listY + i * TR_ROW - p.vs.pos;
@@ -1103,10 +1115,7 @@ void BrowseWiiU::drawTV(Page& p)
     GRRLIB_texImg* back = info.picture.id.empty() ? nullptr : ImagesWiiU::get(info.picture, Kind::Backdrop);
     if (back) {
         image(back, 0, 0, TW, TH);
-        hgradient(0, 0, 940, TH, 0x000000E0, 0x00000000);
-        gradient(0, 0, TW, 110, 0x00000090, 0x00000000);
-        gradient(0, 250, TW, 190, 0x00000000, 0x000000E0);
-        rect(0, 440, TW, TH - 440, 0x000000E0);
+        rect(0, 0, TW, TH, 0x000000A8);   /* one veil: the text and the row readable */
     }
     const u32 tc = back ? 0xFFFFFFFF : pal.text;
     const u32 dc = back ? 0xD6DEE8FF : pal.textDim;
@@ -1126,7 +1135,7 @@ void BrowseWiiU::drawTV(Page& p)
         GRRLIB_texImg* tex = ImagesWiiU::get(info.poster, wide ? Kind::Thumb : Kind::Large);
         tileFrame(x, y, w, h, 12, 0);
         if (tex) image(tex, x, y, w, h, 12);
-        else Ui::roundRect(x, y, w, h, 12, pal.cardTop, pal.cardBottom);
+        else Ui::roundRect(x, y, w, h, 12, pal.cardTop);
         textW_ = x - TV_X - 40;
     }
     float y = 116;
@@ -1180,14 +1189,13 @@ void BrowseWiiU::drawTVCarousel(Page& p)
     if (!items || items->empty()) return;
     textS(TV_X, CAR_Y, title, 26, tc, TW - 2 * TV_X);
     const float w = wide ? 272 : 132, h = wide ? 153 : 198, gap = 22, step = w + gap;
-    const float y = CAR_Y + 46 + (wide ? 22 : 0);
+    const float y = CAR_Y + 54;
     const float view = TW - 2 * TV_X;
     const float maxScroll = std::max(0.0f, items->size() * step - gap - view);
     float target = (sel < 0 ? 0 : sel) * step - (view - w) * 0.35f;
     target = target < 0 ? 0 : target > maxScroll ? maxScroll : target;
     if (key != tvRowKey) { tvRowKey = key; tvScroll = target; }
     tvScroll += (target - tvScroll) * 0.25f;
-    clip(0, CAR_Y + 30, TW, TH - CAR_Y - 30);
     for (int i = 0; i < (int)items->size(); ++i) {
         const float x = TV_X + i * step - tvScroll;
         if (x + w < -40 || x > TW + 40) continue;
@@ -1201,11 +1209,9 @@ void BrowseWiiU::drawTVCarousel(Page& p)
             Ui::roundRect(x + 8, y + 8, textW(b, 18) + 18, 28, 14, 0x000000A0);
             text(x + 17, y + 12, b, 18, 0xFFFFFFFF);
         } else if (wide) {
-            gradient(x, y + h - 40, w, 40, 0x00000000, 0x000000B0);
-            textC(x + w / 2, y + h - 30, it.name, 18, 0xFFFFFFFF, w - 16);
+            caption(x + w / 2, y + h + 16, it.name, 20, i == sel ? tc : dc, w, TW);
         }
     }
-    clipOff();
     (void)dc;
 }
 
@@ -1216,9 +1222,7 @@ void BrowseWiiU::drawTVDetail(Page& p)
     GRRLIB_texImg* back = ImagesWiiU::get(p.item, Kind::Backdrop);
     if (back) {
         image(back, 0, 0, TW, TH);
-        rect(0, 0, TW, TH, 0x00000070);
-        hgradient(0, 0, 900, TH, 0x000000D8, 0x00000000);
-        gradient(0, 0, TW, 110, 0x00000080, 0x00000000);
+        rect(0, 0, TW, TH, 0x000000B0);
     }
     const u32 tc = back ? 0xFFFFFFFF : pal.text;
     const u32 dc = back ? 0xD6DEE8FF : pal.textDim;
@@ -1230,7 +1234,7 @@ void BrowseWiiU::drawTVDetail(Page& p)
         GRRLIB_texImg* tex = ImagesWiiU::get(posterOf(p.item), Kind::Large);
         tileFrame(px, py, pw, ph, 14, 0);
         if (tex) image(tex, px, py, pw, ph, 14);
-        else Ui::roundRect(px, py, pw, ph, 14, pal.cardTop, pal.cardBottom);
+        else Ui::roundRect(px, py, pw, ph, 14, pal.cardTop);
     }
     const float tw = px - TV_X - 60;
     float y = 120;
@@ -1273,8 +1277,10 @@ void BrowseWiiU::drawTVDetail(Page& p)
         paragraph(TV_X, TH - 136, tw, std::string(tr("Cast & crew")) + ": " + people, 21, dc, 2, 28);
     /* the tracks to play with */
     float cx = TV_X;
-    auto chip = [&](Icon ic, const std::string& s) {
+    auto chip = [&](Icon ic, const std::string& s0) {
+        const std::string s = ellipsize(s0, 20, 340);
         const float w = textW(s, 20) + 64;
+        if (cx + w > px - 30) return;
         Ui::roundRect(cx, TH - 70, w, 40, 20, Ui::alpha(back ? 0x000000FF : pal.cardTop, 0.6f));
         Ui::roundBorder(cx, TH - 70, w, 40, 20, 1.5f, Ui::alpha(back ? 0xFFFFFFFF : pal.cardBorder, 0.5f));
         icon(ic, cx + 26, TH - 50, 22, tc);
@@ -1296,7 +1302,7 @@ void BrowseWiiU::drawTVTracks(Page& p)
     tileFrame(cx, cy, cs, cs, 16, 0);
     if (tex) image(tex, cx, cy, cs, cs, 16);
     else {
-        Ui::roundRect(cx, cy, cs, cs, 16, pal.cardTop, pal.cardBottom);
+        Ui::roundRect(cx, cy, cs, cs, 16, pal.cardTop);
         icon(Icon::Music, cx + cs / 2, cy + cs / 2, 120, pal.textDim);
     }
     const float x = cx + cs + 60, w = TW - TV_X - x;
@@ -1385,10 +1391,11 @@ bool BrowseWiiU::frame(ir_t& ir)
         drawFooter(cur);
         if (frames < messageUntil) {
             const Ui::Palette& pal = Ui::pal();
-            const float w = textW(message, 17) + 40;
+            const std::string m = ellipsize(message, 17, PW - 80);
+            const float w = textW(m, 17) + 40;
             Ui::shadow((PW - w) / 2, FOOT_Y - 60, w, 44, 22, 6, pal.shadow);
-            Ui::roundRect((PW - w) / 2, FOOT_Y - 60, w, 44, 22, pal.cardTop, pal.cardBottom);
-            textC(PW / 2, FOOT_Y - 48, message, 17, pal.text);
+            Ui::roundRect((PW - w) / 2, FOOT_Y - 60, w, 44, 22, pal.cardTop);
+            textC(PW / 2, FOOT_Y - 48, m, 17, pal.text);
         }
     };
     if (dual) {

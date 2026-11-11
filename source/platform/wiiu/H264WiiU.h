@@ -36,5 +36,9 @@ bool next(TexWiiU*& y, TexWiiU*& uv, double& pts);
 void inUse(TexWiiU* shown, TexWiiU* next);
 /* pictures decoded so far */
 unsigned decoded();
+/* The decoder is an emulator's (Cemu's: its loader gives a function that
+ * exists nowhere): with B-frames (any server transcode) its pictures reach
+ * the screen only now and then, so the player decodes with FFmpeg there */
+bool emulated();
 
 }

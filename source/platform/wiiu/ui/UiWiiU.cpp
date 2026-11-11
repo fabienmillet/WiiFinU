@@ -339,8 +339,7 @@ void button(float x, float y, float w, float h, const std::string& label, int si
     const float r = h * 0.5f;
     Ui::shadow(x + 1, y + 3, w - 2, h - 2, r, 5, p.shadow);
     if (focus > 0.01f) Ui::shadow(x - 2, y - 2, w + 4, h + 4, r + 2, 8 * focus, Ui::alpha(p.glow, focus));
-    if (primary) Ui::roundRect(x, y, w, h, r, p.accent, p.accentDark);
-    else         Ui::roundRect(x, y, w, h, r, p.cardTop, p.cardBottom);
+    Ui::roundRect(x, y, w, h, r, primary ? p.accent : p.cardTop);
     Ui::roundBorder(x, y, w, h, r, focus > 0.5f ? 2.5f : 1.5f,
                     focus > 0.01f ? Ui::mix(p.cardBorder, p.accent, focus) : p.cardBorder);
     const u32 tc = primary ? p.textOnAccent : p.text;
@@ -402,7 +401,7 @@ void hints(float x, float y, const Hint* hs, int n, int size, u32 color, bool ri
         const char* b = Ui::buttonName(hs[i].button);
         const bool wide = strlen(b) > 1;
         const float bw = wide ? textW(b, size - 4) + 14 : d;
-        Ui::roundRect(cx, y, bw, d, d * 0.5f, Ui::mix(p.cardTop, 0xFFFFFFFF, 0.2f), p.cardBottom);
+        Ui::roundRect(cx, y, bw, d, d * 0.5f, p.cardTop);
         Ui::roundBorder(cx, y, bw, d, d * 0.5f, 1.5f, p.cardBorder);
         Ui::textCentered(cx + bw * 0.5f, y + (d - (size - 3)) * 0.5f - 1, b, size - 3, p.text);
         cx += bw + 6;

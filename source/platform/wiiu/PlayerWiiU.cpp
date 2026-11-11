@@ -939,7 +939,8 @@ void playMain()
     if (vIdx < 0 && aIdx < 0) { SYS_Report("[PlayerWiiU] no audio nor video\n"); goto out; }
     if (fmt->duration > 0) g_mplayer_duration = (float)(fmt->duration / (double)AV_TIME_BASE);
 
-    if (vIdx >= 0 && fmt->streams[vIdx]->codecpar->codec_id == AV_CODEC_ID_H264 && !s_hwBroken) {
+    if (vIdx >= 0 && fmt->streams[vIdx]->codecpar->codec_id == AV_CODEC_ID_H264 && !s_hwBroken &&
+        !H264WiiU::emulated()) {
         /* H.264: the console's decoder (HD without the CPU); a stream in
          * MKV or MP4 (AVCC) goes to it as Annex B */
         AVStream* st = fmt->streams[vIdx];
