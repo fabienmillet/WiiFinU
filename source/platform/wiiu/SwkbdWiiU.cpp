@@ -26,6 +26,15 @@ void*     s_work = nullptr;
 FSClient* s_fs = nullptr;
 St        s_st = St::Off;
 unsigned  s_lastAsked = 0;        /* the frame edit() was last called in */
+unsigned  s_goneAt = 0;           /* the frame it was told to go away */
+
+/* its fading out: a few frames at most (an emulator that doesn't run the
+ * keyboard never gets to Hidden) */
+bool fading()
+{
+    return s_created && nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden &&
+           GfxWiiU::frames() - s_goneAt < 30;
+}
 std::u16string s_initial, s_ok, s_result;
 
 std::u16string toU16(const std::string& s)
@@ -141,7 +150,7 @@ Result edit(std::string& text, const char* okLabel, bool password, size_t maxLen
         break;
     }
     /* a new one: once the last one is gone */
-    if (s_created && nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden) return Result::Busy;
+    if (fading()) return Result::Busy;
     if (!create()) return Result::Unavailable;
     s_initial = toU16(text);
     s_ok = toU16(okLabel ? okLabel : "OK");
@@ -176,7 +185,7 @@ void shutdown()
 
 bool shown()
 {
-    return s_created && (s_st == St::Shown || nn::swkbd::GetStateInputForm() != nn::swkbd::State::Hidden);
+    return s_created && (s_st == St::Shown || fading());
 }
 
 void calc()
@@ -193,13 +202,16 @@ void calc()
         const char16_t* s = nn::swkbd::GetInputFormString();
         s_result = s ? s : u"";
         nn::swkbd::DisappearInputForm();
+        s_goneAt = GfxWiiU::frames();
         s_st = St::Ok;
     } else if (nn::swkbd::IsDecideCancelButton(nullptr)) {
         nn::swkbd::DisappearInputForm();
+        s_goneAt = GfxWiiU::frames();
         s_st = St::Cancel;
     } else if (GfxWiiU::frames() - s_lastAsked > 3) {
         /* the field closed by WiiFin meanwhile */
         nn::swkbd::DisappearInputForm();
+        s_goneAt = GfxWiiU::frames();
         s_st = St::Off;
     }
 }
