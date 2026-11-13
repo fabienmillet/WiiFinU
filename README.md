@@ -60,7 +60,7 @@ Screens, buttons, video limits and how it is built: **[docs/WIIU.md](docs/WIIU.m
 
 ## ⚠️ Project status
 
-> 🚧 **Not released yet**: tested in the [Cemu](https://cemu.info) emulator so far, not on a console yet. Test builds will be shared on Discord.
+> 🚧 **Beta**: 0.1.0 is a pre-release, tested in the [Cemu](https://cemu.info) emulator so far, not on a console yet. Reports from a real Wii U are very welcome: open an issue with `sd:/wiiu/apps/WiiFinU/wiifinu.log`.
 
 - The video limits are cautious until they are measured on real consoles
 - Picture subtitles (PGS, VobSub) are burned in by the server

@@ -60,7 +60,7 @@ Schermi, tasti, limiti video e compilazione: **[docs/WIIU.md](../docs/WIIU.md)**
 
 ## ⚠️ Stato del progetto
 
-> 🚧 **Non ancora pubblicato**: finora provato nell'emulatore [Cemu](https://cemu.info), non ancora su console. Le versioni di prova saranno condivise su Discord.
+> 🚧 **Beta**: la 0.1.0 è una pre-release, finora provata nell'emulatore [Cemu](https://cemu.info), non ancora su console. Le segnalazioni da una vera Wii U sono benvenute: apri una issue con `sd:/wiiu/apps/WiiFinU/wiifinu.log`.
 
 - I limiti video sono prudenti finché non saranno misurati su console vere
 - I sottotitoli a immagine (PGS, VobSub) sono impressi dal server

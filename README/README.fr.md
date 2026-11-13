@@ -60,7 +60,7 @@ Les paramètres, les profils et le journal (`wiifinu.log`, pour signaler un bug)
 
 ## ⚠️ État du projet
 
-> 🚧 **Pas encore publié** : testé dans l'émulateur [Cemu](https://cemu.info) pour l'instant, pas encore sur console. Des versions de test seront partagées sur Discord.
+> 🚧 **Bêta** : la 0.1.0 est une pré-version, testée dans l'émulateur [Cemu](https://cemu.info) pour l'instant, pas encore sur console. Les retours depuis une vraie Wii U sont les bienvenus : ouvrez une issue avec `sd:/wiiu/apps/WiiFinU/wiifinu.log`.
 
 - Les limites vidéo sont prudentes tant qu'elles ne sont pas mesurées sur de vraies consoles
 - Les sous-titres image (PGS, VobSub) sont incrustés par le serveur

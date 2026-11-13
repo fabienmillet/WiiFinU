@@ -60,7 +60,7 @@ Bildschirme, Tasten, Videogrenzen und das Kompilieren: **[docs/WIIU.md](../docs/
 
 ## ⚠️ Projektstatus
 
-> 🚧 **Noch nicht veröffentlicht**: bisher im Emulator [Cemu](https://cemu.info) getestet, noch nicht auf einer Konsole. Testversionen gibt es auf Discord.
+> 🚧 **Beta**: 0.1.0 ist eine Vorabversion, bisher im Emulator [Cemu](https://cemu.info) getestet, noch nicht auf einer Konsole. Berichte von einer echten Wii U sind sehr willkommen: Öffne ein Issue mit `sd:/wiiu/apps/WiiFinU/wiifinu.log`.
 
 - Die Videogrenzen sind vorsichtig, bis sie auf echten Konsolen gemessen sind
 - Bild-Untertitel (PGS, VobSub) brennt der Server ein
