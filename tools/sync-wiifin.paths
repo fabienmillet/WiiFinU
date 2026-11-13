@@ -1,0 +1,17 @@
+# WiiFin's files as tools/sync-wiifin.sh sees them in WiiFin U.
+#
+# hand: WiiFin U draws these screens its own way (source/platform/wiiu/ui/):
+#   WiiFin's changes there merge, but show on the Wii U only once brought
+#   over by hand
+hand source/ui/Library
+hand source/ui/BrowseHome
+#
+# ours: WiiFin U's own version of WiiFin's file or folder; WiiFin's changes
+#   there (and WiiFin's new files in it) are left out of the merge
+ours Makefile
+ours README.md
+ours README/
+ours CONTRIBUTING.md
+ours .github/
+ours .gitignore
+ours assets/
