@@ -42,6 +42,10 @@ git merge upstream/develop
 
 The Wii's own files (its Makefile, MPlayer CE, the WAD and Homebrew Channel files, the Dolphin tests) and the 3DS port ([3DSFin](https://github.com/fabienmillet/3DSFin)) are not in this repository: a merge that touches them stops on a modify/delete conflict, settled with `git rm` on those files. A change in the shared core may need its Wii U side (`source/platform/wiiu/`) too.
 
+Every day the **Sync with WiiFin** workflow checks whether WiiFin's `develop` is merged: if not, it tries the merge and a build, and keeps an issue of the same name up to date with the commits to merge and those to bring over by hand (WiiFin's browsing screens, which WiiFin U draws its own way). `tools/sync-wiifin.sh` gives the same report locally; `tools/sync-wiifin.paths` says which of WiiFin's files are WiiFin U's own.
+
+A fix to the shared core goes to [WiiFin](https://github.com/fabienmillet/WiiFin) first, then comes here with the merge: the two keep the same core.
+
 ---
 
 ## 🧪 How to Contribute
@@ -50,7 +54,7 @@ The Wii's own files (its Makefile, MPlayer CE, the WAD and Homebrew Channel file
 2. **Make clear and atomic commits.**
 3. **Build without warnings**: `make WERROR=-Werror`.
 4. **Test your change in Cemu and, if you can, on a real Wii U**, with a TV and with the GamePad alone (*Settings > Screens*).
-5. **Open a Pull Request** to the `main` branch.
+5. **Open a Pull Request** to the `develop` branch (`main` gets it at each release).
 
 When reporting a bug from a console, attach `sd:/wiiu/apps/WiiFinU/wiifinu.log`: it hides addresses, tokens and user ids, so it can be shared as it is.
 

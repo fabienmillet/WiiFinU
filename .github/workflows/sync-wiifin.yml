@@ -1,0 +1,79 @@
+name: Sync with WiiFin
+
+# Every day: is WiiFin's develop in develop?  If not, a trial merge and a build
+# of it (tools/sync-wiifin.sh), and one issue "Sync with WiiFin" kept up to
+# date: the commits to merge, those to bring over by hand, whether the merge
+# goes in and builds.  The merge itself is made by hand (signed commits);
+# the issue closes once develop has WiiFin's develop.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency: sync-wiifin
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      TITLE: Sync with WiiFin
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Trial merge
+        id: check
+        run: |
+          mkdir -p "$RUNNER_TEMP/sync"
+          TMP_DIR="$RUNNER_TEMP/sync" KEEP_TREE=1 OUT="$GITHUB_OUTPUT" \
+            REPORT="$RUNNER_TEMP/report.md" tools/sync-wiifin.sh
+
+      # the build's libraries (its cache, the same paths and key), copied
+      # into the trial merge
+      - name: Bundled libraries (cache)
+        if: steps.check.outputs.behind != '0' && steps.check.outputs.conflicts == '0'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            libs/ffmpeg-wiiu
+            libs/mbedtls/libwiiu
+          key: libswiiu-devkitppc-20261102-${{ hashFiles('tools/wiiu/setup.sh', 'tools/wiiu/build_ffmpeg.sh', 'libs/mbedtls/include/mbedtls/mbedtls_config.h') }}
+
+      - name: Build of the trial merge
+        id: build
+        if: steps.check.outputs.behind != '0' && steps.check.outputs.conflicts == '0'
+        continue-on-error: true
+        run: |
+          for d in libs/ffmpeg-wiiu libs/mbedtls/libwiiu; do
+            [ -d "$d" ] && mkdir -p "${{ steps.check.outputs.tree }}/$(dirname $d)" && cp -a "$d" "${{ steps.check.outputs.tree }}/$d"
+          done
+          docker run --rm -v "${{ steps.check.outputs.tree }}:/w" -w /w devkitpro/devkitppc:20261102 bash -c '
+            set -e
+            apt-get update -qq && apt-get install -y -qq xxd >/dev/null
+            dkp-pacman -Rdd --noconfirm wiiu-curl wiiu-mbedtls >/dev/null 2>&1 || true
+            tools/wiiu/setup.sh >/dev/null
+            make -j"$(nproc)" WERROR=-Werror'
+
+      - name: Issue
+        run: |
+          behind='${{ steps.check.outputs.behind }}'
+          num=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+                --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+          if [ "$behind" = 0 ]; then
+            [ -n "$num" ] && gh issue close "$num" --comment "WiiFin's develop is merged now."
+            exit 0
+          fi
+          body="$RUNNER_TEMP/report.md"
+          case '${{ steps.build.outcome }}' in
+            success) sed -i 's/^\*\*Trial merge: goes in\*\*.*/&\n**Build of it: OK.**/' "$body" ;;
+            failure) sed -i "s|^\*\*Trial merge: goes in\*\*.*|&\n**Build of it: fails** ([log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)).|" "$body" ;;
+          esac
+          if [ -n "$num" ]; then gh issue edit "$num" --body-file "$body"
+          else gh issue create --title "$TITLE" --body-file "$body"; fi
